@@ -162,6 +162,5 @@ enum VoteType {
 
 enum TeamRole {
   ADMIN
-  EDITOR
   VIEWER
 }

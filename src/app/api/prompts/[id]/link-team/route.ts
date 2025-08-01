@@ -28,7 +28,7 @@ async function checkTeamMembership(teamId: number, userId: number) {
     where: {
       team_id: teamId,
       user_id: userId,
-      role: { in: ['ADMIN', 'EDITOR'] }
+      role: 'ADMIN'
     },
     include: {
       team: {

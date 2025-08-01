@@ -7,7 +7,7 @@ import Navigation from '@/components/Navigation'
 interface Team {
   id: number
   name: string
-  userRole: 'ADMIN' | 'EDITOR' | 'VIEWER'
+  userRole: 'ADMIN' | 'VIEWER'
 }
 
 export default function NewPromptPage() {
@@ -44,9 +44,9 @@ export default function NewPromptPage() {
 
       if (response.ok) {
         const data = await response.json()
-        // Only show teams where user can edit (admin or editor)
+        // Only show teams where user can edit (admin only)
         const editableTeams = data.teams.filter((team: Team) => 
-          team.userRole === 'ADMIN' || team.userRole === 'EDITOR'
+          team.userRole === 'ADMIN'
         )
         setTeams(editableTeams)
       }

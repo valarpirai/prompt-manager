@@ -39,7 +39,7 @@ async function checkPromptPermission(promptId: number, userId: number, action: '
     }
     
     const member = prompt.team.members[0]
-    if (action === 'view' || (action === 'edit' && ['ADMIN', 'EDITOR'].includes(member.role))) {
+    if (action === 'view' || (action === 'edit' && member.role === 'ADMIN')) {
       return { hasPermission: true, prompt, error: null }
     }
   }
@@ -158,9 +158,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           where: {
             team_id: validatedTeamId,
             user_id: authReq.user!.userId,
-            role: {
-              in: ['ADMIN', 'EDITOR']
-            }
+            role: 'ADMIN'
           }
         })
 

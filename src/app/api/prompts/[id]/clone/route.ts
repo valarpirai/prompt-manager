@@ -42,10 +42,11 @@ async function checkPromptPermission(promptId: number, userId: number) {
   return { hasPermission: false, prompt: null, error: 'Permission denied' }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const promptId = parseInt(params.id)
+      const { id } = await params
+      const promptId = parseInt(id)
 
       if (isNaN(promptId)) {
         return NextResponse.json({ error: 'Invalid prompt ID' }, { status: 400 })

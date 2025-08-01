@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { withAuth, AuthenticatedRequest } from '@/lib/middleware'
 import { validateTeamName } from '@/lib/validation'
 
-async function checkTeamPermission(teamId: number, userId: number, requiredRole?: 'ADMIN' | 'EDITOR') {
+async function checkTeamPermission(teamId: number, userId: number, requiredRole?: 'ADMIN') {
   const teamMember = await prisma.teamMember.findFirst({
     where: {
       team_id: teamId,
@@ -19,8 +19,7 @@ async function checkTeamPermission(teamId: number, userId: number, requiredRole?
   }
 
   if (requiredRole) {
-    const hasPermission = teamMember.role === 'ADMIN' || 
-                         (requiredRole === 'EDITOR' && teamMember.role === 'EDITOR')
+    const hasPermission = teamMember.role === 'ADMIN'
     return { 
       hasPermission, 
       team: teamMember.team, 

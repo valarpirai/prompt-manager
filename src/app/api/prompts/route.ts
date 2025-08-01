@@ -15,12 +15,52 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
     const tags = searchParams.get('tags')?.split(',').filter(Boolean) || []
     const sortBy = searchParams.get('sortBy') || 'created_at'
     const sortOrder = searchParams.get('sortOrder') || 'desc'
+    const ownerFilter = searchParams.get('owner')
+    const filterType = searchParams.get('filterType')
 
     const skip = (page - 1) * limit
 
     const where: any = {
-      deleted_at: null,
-      OR: [
+      deleted_at: null
+    }
+
+    // Apply filter type logic
+    if (filterType === 'all') {
+      // All prompts: public prompts + all my prompts
+      where.OR = [
+        { visibility: 'PUBLIC' },
+        { owner_id: req.user!.userId }
+      ]
+    } else if (filterType === 'my-prompts') {
+      // My prompts: prompts created by me
+      where.owner_id = req.user!.userId
+    } else if (filterType === 'PUBLIC') {
+      // Public prompts: all public prompts
+      where.visibility = 'PUBLIC'
+    } else if (filterType === 'PRIVATE') {
+      // Private prompts: my private prompts
+      where.AND = [
+        { visibility: 'PRIVATE' },
+        { owner_id: req.user!.userId }
+      ]
+    } else if (filterType === 'TEAM') {
+      // Team prompts: prompts from my teams
+      where.AND = [
+        { visibility: 'TEAM' },
+        { team_id: { not: null } },
+        {
+          team: {
+            members: {
+              some: {
+                user_id: req.user!.userId
+              }
+            }
+          }
+        }
+      ]
+    } else {
+      // Default: show accessible prompts (original logic)
+      where.OR = [
         { visibility: 'PUBLIC' },
         { owner_id: req.user!.userId },
         {
@@ -42,14 +82,24 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
     }
 
     if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { prompt_text: { contains: search, mode: 'insensitive' } }
-      ]
-    }
-
-    if (visibility) {
-      where.visibility = visibility
+      // If we already have an OR condition from filtering, we need to combine it with search
+      if (where.OR) {
+        where.AND = [
+          { OR: where.OR },
+          {
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { prompt_text: { contains: search, mode: 'insensitive' } }
+            ]
+          }
+        ]
+        delete where.OR
+      } else {
+        where.OR = [
+          { title: { contains: search, mode: 'insensitive' } },
+          { prompt_text: { contains: search, mode: 'insensitive' } }
+        ]
+      }
     }
 
     if (teamId) {
@@ -57,12 +107,24 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
     }
 
     if (tags.length > 0) {
-      where.tags = {
-        some: {
-          name: {
-            in: tags
+      const tagsCondition = {
+        tags: {
+          some: {
+            name: {
+              in: tags
+            }
           }
         }
+      }
+      
+      // Combine with existing conditions
+      if (where.AND) {
+        where.AND.push(tagsCondition)
+      } else if (where.OR) {
+        where.AND = [{ OR: where.OR }, tagsCondition]
+        delete where.OR
+      } else {
+        Object.assign(where, tagsCondition)
       }
     }
 
@@ -160,9 +222,7 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
         where: {
           team_id: validatedTeamId,
           user_id: req.user!.userId,
-          role: {
-            in: ['ADMIN', 'EDITOR']
-          }
+          role: 'ADMIN'
         }
       })
 

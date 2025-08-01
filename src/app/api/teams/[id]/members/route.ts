@@ -39,7 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
       }
 
-      if (!['ADMIN', 'EDITOR', 'VIEWER'].includes(role)) {
+      if (!['ADMIN', 'VIEWER'].includes(role)) {
         return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
       }
 
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         data: {
           team_id: teamId,
           user_id: user.id,
-          role: role as 'ADMIN' | 'EDITOR' | 'VIEWER'
+          role: role as 'ADMIN' | 'VIEWER'
         },
         include: {
           user: {

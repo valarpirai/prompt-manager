@@ -31,7 +31,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string; 
 
       const { role } = await authReq.json()
 
-      if (!role || !['ADMIN', 'EDITOR', 'VIEWER'].includes(role)) {
+      if (!role || !['ADMIN', 'VIEWER'].includes(role)) {
         return NextResponse.json({ error: 'Valid role is required' }, { status: 400 })
       }
 
@@ -66,7 +66,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string; 
       // Update member role
       const updatedMember = await prisma.teamMember.update({
         where: { id: existingMember.id },
-        data: { role: role as 'ADMIN' | 'EDITOR' | 'VIEWER' },
+        data: { role: role as 'ADMIN' | 'VIEWER' },
         include: {
           user: {
             select: {

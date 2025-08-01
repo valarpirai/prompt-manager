@@ -7,7 +7,7 @@ import Link from 'next/link'
 
 interface TeamMember {
   id: number
-  role: 'ADMIN' | 'EDITOR' | 'VIEWER'
+  role: 'ADMIN' | 'VIEWER'
   created_at: string
   user: {
     id: number
@@ -35,7 +35,7 @@ interface Team {
   description: string | null
   created_at: string
   updated_at: string
-  userRole: 'ADMIN' | 'EDITOR' | 'VIEWER'
+  userRole: 'ADMIN' | 'VIEWER'
   members: TeamMember[]
   prompts: TeamPrompt[]
   _count: {
@@ -50,7 +50,7 @@ export default function TeamDetailPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'prompts'>('overview')
   const [showAddMember, setShowAddMember] = useState(false)
   const [newMemberEmail, setNewMemberEmail] = useState('')
-  const [newMemberRole, setNewMemberRole] = useState<'ADMIN' | 'EDITOR' | 'VIEWER'>('VIEWER')
+  const [newMemberRole, setNewMemberRole] = useState<'ADMIN' | 'VIEWER'>('VIEWER')
   const [addingMember, setAddingMember] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -155,7 +155,7 @@ export default function TeamDetailPage() {
     }
   }
 
-  const handleChangeRole = async (userId: number, newRole: 'ADMIN' | 'EDITOR' | 'VIEWER') => {
+  const handleChangeRole = async (userId: number, newRole: 'ADMIN' | 'VIEWER') => {
     try {
       const token = localStorage.getItem('accessToken')
       const response = await fetch(`/api/teams/${teamId}/members/${userId}`, {
@@ -190,7 +190,6 @@ export default function TeamDetailPage() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'ADMIN': return 'bg-red-100 text-red-800'
-      case 'EDITOR': return 'bg-blue-100 text-blue-800'
       case 'VIEWER': return 'bg-gray-100 text-gray-800'
       default: return 'bg-gray-100 text-gray-800'
     }
@@ -465,10 +464,9 @@ export default function TeamDetailPage() {
                             id="memberRole"
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             value={newMemberRole}
-                            onChange={(e) => setNewMemberRole(e.target.value as 'ADMIN' | 'EDITOR' | 'VIEWER')}
+                            onChange={(e) => setNewMemberRole(e.target.value as 'ADMIN' | 'VIEWER')}
                           >
                             <option value="VIEWER">Viewer - Can view team prompts</option>
-                            <option value="EDITOR">Editor - Can edit team prompts</option>
                             <option value="ADMIN">Admin - Full team management</option>
                           </select>
                         </div>
@@ -515,11 +513,10 @@ export default function TeamDetailPage() {
                           {canManageMembers() ? (
                             <select
                               value={member.role}
-                              onChange={(e) => handleChangeRole(member.user.id, e.target.value as 'ADMIN' | 'EDITOR' | 'VIEWER')}
+                              onChange={(e) => handleChangeRole(member.user.id, e.target.value as 'ADMIN' | 'VIEWER')}
                               className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                             >
                               <option value="ADMIN">Admin</option>
-                              <option value="EDITOR">Editor</option>
                               <option value="VIEWER">Viewer</option>
                             </select>
                           ) : (

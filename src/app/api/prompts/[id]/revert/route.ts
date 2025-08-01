@@ -25,10 +25,10 @@ async function checkPromptEditPermission(promptId: number, userId: number) {
     return { hasPermission: true, prompt }
   }
 
-  // Team editors and admins can edit
+  // Team admins can edit
   if (prompt.team && prompt.team.members.length > 0) {
     const member = prompt.team.members[0]
-    if (['ADMIN', 'EDITOR'].includes(member.role)) {
+    if (member.role === 'ADMIN') {
       return { hasPermission: true, prompt }
     }
   }

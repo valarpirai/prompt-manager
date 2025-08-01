@@ -7,7 +7,7 @@ import Link from 'next/link'
 
 interface TeamMember {
   id: number
-  role: 'ADMIN' | 'EDITOR' | 'VIEWER'
+  role: 'ADMIN' | 'VIEWER'
   created_at: string
   user: {
     id: number
@@ -22,7 +22,7 @@ interface Team {
   description: string | null
   created_at: string
   updated_at: string
-  userRole: 'ADMIN' | 'EDITOR' | 'VIEWER'
+  userRole: 'ADMIN' | 'VIEWER'
   members: TeamMember[]
   _count: {
     prompts: number
@@ -87,7 +87,6 @@ export default function TeamsPage() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'ADMIN': return 'bg-red-100 text-red-800'
-      case 'EDITOR': return 'bg-blue-100 text-blue-800'
       case 'VIEWER': return 'bg-gray-100 text-gray-800'
       default: return 'bg-gray-100 text-gray-800'
     }

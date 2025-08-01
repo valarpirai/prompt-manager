@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import Link from 'next/link'
@@ -12,12 +12,15 @@ interface Prompt {
   title: string
   prompt_text: string
   usage_count: number
-  visibility: 'PUBLIC' | 'PRIVATE'
+  upvote_count: number
+  downvote_count: number
+  visibility: 'PUBLIC' | 'PRIVATE' | 'TEAM'
   created_at: string
   updated_at: string
   tags: { id: number; name: string }[]
   owner: { id: number; display_name: string | null; email: string }
   team?: { id: number; name: string }
+  votes: { vote_type: 'UPVOTE' | 'DOWNVOTE' }[]
 }
 
 interface Pagination {
@@ -30,6 +33,12 @@ interface Pagination {
 export default function PromptsPage() {
   const [prompts, setPrompts] = useState<Prompt[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<{ id: number; email: string } | null>(null)
+  const [availableTags, setAvailableTags] = useState<{ id: number; name: string }[]>([])
+  const [isTagsDropdownOpen, setIsTagsDropdownOpen] = useState(false)
+  const [tagSearchInput, setTagSearchInput] = useState('')
+  const tagsDropdownRef = useRef<HTMLDivElement>(null)
+  const tagInputRef = useRef<HTMLInputElement>(null)
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
     limit: 20,
@@ -38,7 +47,8 @@ export default function PromptsPage() {
   })
   const [filters, setFilters] = useState({
     search: '',
-    visibility: 'all',
+    filter: 'all',
+    tags: [] as string[],
     sortBy: 'updated_at',
     sortOrder: 'desc'
   })
@@ -58,8 +68,59 @@ export default function PromptsPage() {
       router.push('/login')
       return
     }
+    fetchCurrentUser()
+    fetchTags()
     fetchPrompts()
   }, [pagination.page, filters, router])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tagsDropdownRef.current && !tagsDropdownRef.current.contains(event.target as Node)) {
+        setIsTagsDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  const fetchCurrentUser = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      const response = await fetch('/api/users/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setCurrentUser(data.user)
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error)
+    }
+  }
+
+  const fetchTags = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      const response = await fetch('/api/tags', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableTags(data.tags)
+      }
+    } catch (error) {
+      console.error('Error fetching tags:', error)
+    }
+  }
 
   const fetchPrompts = async () => {
     setLoading(true)
@@ -69,10 +130,15 @@ export default function PromptsPage() {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
         ...(filters.search && { search: filters.search }),
-        ...(filters.visibility !== 'all' && { visibility: filters.visibility }),
         sortBy: filters.sortBy,
-        sortOrder: filters.sortOrder
+        sortOrder: filters.sortOrder,
+        filterType: filters.filter
       })
+
+      // Add tags parameter if selected
+      if (filters.tags.length > 0) {
+        params.append('tags', filters.tags.join(','))
+      }
 
       const response = await fetch(`/api/prompts?${params}`, {
         headers: {
@@ -178,6 +244,20 @@ export default function PromptsPage() {
     })
   }
 
+  const filteredTags = availableTags.filter(tag => 
+    tag.name.toLowerCase().includes(tagSearchInput.toLowerCase()) &&
+    !filters.tags.includes(tag.name)
+  )
+
+  const handleTagSelect = (tagName: string) => {
+    setFilters(prev => ({
+      ...prev,
+      tags: [...prev.tags, tagName]
+    }))
+    setTagSearchInput('')
+    tagInputRef.current?.focus()
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
@@ -206,7 +286,7 @@ export default function PromptsPage() {
             <div className="p-6">
               <form onSubmit={handleSearch} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="md:col-span-2">
+                  <div>
                     <label htmlFor="search" className="block text-sm font-medium text-gray-700">
                       Search prompts
                     </label>
@@ -221,19 +301,91 @@ export default function PromptsPage() {
                   </div>
                   
                   <div>
-                    <label htmlFor="visibility" className="block text-sm font-medium text-gray-700">
-                      Visibility
+                    <label htmlFor="filter" className="block text-sm font-medium text-gray-700">
+                      Filter by
                     </label>
                     <select
-                      id="visibility"
+                      id="filter"
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      value={filters.visibility}
-                      onChange={(e) => setFilters(prev => ({ ...prev, visibility: e.target.value }))}
+                      value={filters.filter}
+                      onChange={(e) => setFilters(prev => ({ ...prev, filter: e.target.value }))}
                     >
-                      <option value="all">All</option>
-                      <option value="PUBLIC">Public</option>
-                      <option value="PRIVATE">Private</option>
+                      <option value="all">All Prompts</option>
+                      <option value="my-prompts">My Prompts</option>
+                      <option value="PUBLIC">Public Prompts</option>
+                      <option value="PRIVATE">Private Prompts</option>
+                      <option value="TEAM">Team Prompts</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Tags
+                    </label>
+                    <div className="mt-1 relative" ref={tagsDropdownRef}>
+                      <div 
+                        className="min-h-[38px] border border-gray-300 rounded-md shadow-sm bg-white px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
+                        onClick={() => {
+                          setIsTagsDropdownOpen(true)
+                          tagInputRef.current?.focus()
+                        }}
+                      >
+                        <div className="flex flex-wrap gap-1 items-center">
+                          {filters.tags.map((tagName) => (
+                            <span
+                              key={tagName}
+                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                            >
+                              {tagName}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setFilters(prev => ({
+                                    ...prev,
+                                    tags: prev.tags.filter(t => t !== tagName)
+                                  }))
+                                }}
+                                className="ml-1 text-blue-600 hover:text-blue-800"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                          <input
+                            ref={tagInputRef}
+                            type="text"
+                            className="flex-1 min-w-[120px] border-none outline-none bg-transparent text-sm placeholder-gray-500"
+                            placeholder={filters.tags.length === 0 ? "Type to search tags..." : ""}
+                            value={tagSearchInput}
+                            onChange={(e) => {
+                              setTagSearchInput(e.target.value)
+                              setIsTagsDropdownOpen(true)
+                            }}
+                            onFocus={() => setIsTagsDropdownOpen(true)}
+                          />
+                        </div>
+                      </div>
+                      {isTagsDropdownOpen && (
+                        <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto border border-gray-200 rounded-md bg-white shadow-lg">
+                          {filteredTags.length > 0 ? (
+                            filteredTags.map((tag) => (
+                              <div
+                                key={tag.id}
+                                className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700"
+                                onClick={() => handleTagSelect(tag.name)}
+                              >
+                                {tag.name}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">
+                              {tagSearchInput ? 'No matching tags found' : 'No more tags available'}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -252,6 +404,7 @@ export default function PromptsPage() {
                       <option value="updated_at-desc">Recently Updated</option>
                       <option value="created_at-desc">Recently Created</option>
                       <option value="title-asc">Title A-Z</option>
+                      <option value="upvote_count-desc">Most Popular</option>
                       <option value="usage_count-desc">Most Used</option>
                     </select>
                   </div>
@@ -297,6 +450,8 @@ export default function PromptsPage() {
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               prompt.visibility === 'PUBLIC'
                                 ? 'bg-green-100 text-green-800'
+                                : prompt.visibility === 'TEAM'
+                                ? 'bg-blue-100 text-blue-800'
                                 : 'bg-gray-100 text-gray-800'
                             }`}>
                               {prompt.visibility}
@@ -306,9 +461,26 @@ export default function PromptsPage() {
                             {prompt.prompt_text.substring(0, 200)}...
                           </p>
                           <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+                            <span>By {prompt.owner.display_name || prompt.owner.email.split('@')[0]}</span>
+                            <span>•</span>
                             <span>Used {prompt.usage_count} times</span>
                             <span>•</span>
                             <span>Updated {formatDate(prompt.updated_at)}</span>
+                            <span>•</span>
+                            <span className="flex items-center space-x-2">
+                              <span className="flex items-center text-green-600">
+                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                </svg>
+                                {prompt.upvote_count}
+                              </span>
+                              <span className="flex items-center text-red-600">
+                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 10.293a1 1 0 010 1.414l-6 6a1 1 0 01-1.414 0l-6-6a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l4.293-4.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                                {prompt.downvote_count}
+                              </span>
+                            </span>
                             {prompt.tags.length > 0 && (
                               <>
                                 <span>•</span>
@@ -335,42 +507,57 @@ export default function PromptsPage() {
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => setCloneModal({ isOpen: true, prompt })}
-                            className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            title="Clone prompt"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => setLinkTeamModal({ isOpen: true, prompt })}
-                            className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            title="Link to team"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                            </svg>
-                          </button>
-                          <Link
-                            href={`/prompts/${prompt.id}/edit`}
-                            className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            title="Edit prompt"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(prompt.id)}
-                            className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                            title="Delete prompt"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                          {/* Clone button - show for public prompts or owned prompts */}
+                          {(prompt.visibility === 'PUBLIC' || currentUser?.id === prompt.owner.id) && (
+                            <button
+                              onClick={() => setCloneModal({ isOpen: true, prompt })}
+                              className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              title="Clone prompt"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          )}
+                          
+                          {/* Team link button - only show for owners and not for private prompts */}
+                          {currentUser?.id === prompt.owner.id && prompt.visibility !== 'PRIVATE' && (
+                            <button
+                              onClick={() => setLinkTeamModal({ isOpen: true, prompt })}
+                              className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              title="Link to team"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                              </svg>
+                            </button>
+                          )}
+                          
+                          {/* Edit button - only show for owners */}
+                          {currentUser?.id === prompt.owner.id && (
+                            <Link
+                              href={`/prompts/${prompt.id}/edit`}
+                              className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              title="Edit prompt"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </Link>
+                          )}
+                          
+                          {/* Delete button - only show for owners */}
+                          {currentUser?.id === prompt.owner.id && (
+                            <button
+                              onClick={() => handleDelete(prompt.id)}
+                              className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                              title="Delete prompt"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -11,7 +11,7 @@ interface Team {
   description: string | null
   created_at: string
   updated_at: string
-  userRole: 'ADMIN' | 'EDITOR' | 'VIEWER'
+  userRole: 'ADMIN' | 'VIEWER'
 }
 
 export default function EditTeamPage() {
