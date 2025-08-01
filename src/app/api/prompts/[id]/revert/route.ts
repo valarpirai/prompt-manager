@@ -36,10 +36,14 @@ async function checkPromptEditPermission(promptId: number, userId: number) {
   return { hasPermission: false, prompt: null };
 }
 
-export const POST = withAuth(
-  async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const promptId = parseInt(params.id);
+      const { id } = await params;
+      const promptId = parseInt(id);
 
       if (isNaN(promptId)) {
         return NextResponse.json(
@@ -50,7 +54,7 @@ export const POST = withAuth(
 
       const { hasPermission, prompt } = await checkPromptEditPermission(
         promptId,
-        req.user!.userId
+        authReq.user!.userId
       );
 
       if (!hasPermission) {
@@ -60,7 +64,7 @@ export const POST = withAuth(
         );
       }
 
-      const { version } = await req.json();
+      const { version } = await authReq.json();
 
       if (!version || typeof version !== 'number') {
         return NextResponse.json(
@@ -137,7 +141,7 @@ export const POST = withAuth(
             title: targetVersion.title,
             prompt_text: targetVersion.prompt_text,
             version: newVersionNumber,
-            created_by: req.user!.userId,
+            created_by: authReq.user!.userId,
             tags: {
               connect: targetVersion.tags.map((tag) => ({ id: tag.id })),
             },
@@ -158,5 +162,5 @@ export const POST = withAuth(
         { status: 500 }
       );
     }
-  }
-);
+  })(req);
+}

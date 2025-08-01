@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, AuthenticatedRequest } from '@/lib/middleware';
 
@@ -53,10 +53,14 @@ async function checkTeamMembership(teamId: number, userId: number) {
   return { hasPermission: true, team: member.team, error: null };
 }
 
-export const PUT = withAuth(
-  async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const promptId = parseInt(params.id);
+      const { id } = await params;
+      const promptId = parseInt(id);
 
       if (isNaN(promptId)) {
         return NextResponse.json(
@@ -65,12 +69,12 @@ export const PUT = withAuth(
         );
       }
 
-      const { teamId } = await req.json();
+      const { teamId } = await authReq.json();
 
       // Check if user owns the prompt
       const promptCheck = await checkPromptOwnership(
         promptId,
-        req.user!.userId
+        authReq.user!.userId
       );
       if (!promptCheck.hasPermission) {
         return NextResponse.json(
@@ -94,7 +98,7 @@ export const PUT = withAuth(
         // Linking to a team - check team membership and permissions
         const teamCheck = await checkTeamMembership(
           validatedTeamId,
-          req.user!.userId
+          authReq.user!.userId
         );
         if (!teamCheck.hasPermission) {
           return NextResponse.json({ error: teamCheck.error }, { status: 403 });
@@ -171,5 +175,5 @@ export const PUT = withAuth(
         { status: 500 }
       );
     }
-  }
-);
+  })(req);
+}

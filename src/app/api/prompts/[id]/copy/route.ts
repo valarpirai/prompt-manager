@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, AuthenticatedRequest } from '@/lib/middleware';
 
@@ -35,10 +35,14 @@ async function checkPromptPermission(promptId: number, userId: number) {
   return { hasPermission: false, prompt: null, error: 'Permission denied' };
 }
 
-export const POST = withAuth(
-  async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const promptId = parseInt(params.id);
+      const { id } = await params;
+      const promptId = parseInt(id);
 
       if (isNaN(promptId)) {
         return NextResponse.json(
@@ -49,7 +53,7 @@ export const POST = withAuth(
 
       const { hasPermission, error } = await checkPromptPermission(
         promptId,
-        req.user!.userId
+        authReq.user!.userId
       );
 
       if (!hasPermission) {
@@ -76,5 +80,5 @@ export const POST = withAuth(
         { status: 500 }
       );
     }
-  }
-);
+  })(req);
+}

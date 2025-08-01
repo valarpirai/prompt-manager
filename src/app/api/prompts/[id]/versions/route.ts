@@ -36,10 +36,14 @@ async function checkPromptPermission(promptId: number, userId: number) {
   return { hasPermission: false, prompt: null };
 }
 
-export const GET = withAuth(
-  async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const promptId = parseInt(params.id);
+      const { id } = await params;
+      const promptId = parseInt(id);
 
       if (isNaN(promptId)) {
         return NextResponse.json(
@@ -50,7 +54,7 @@ export const GET = withAuth(
 
       const { hasPermission } = await checkPromptPermission(
         promptId,
-        req.user!.userId
+        authReq.user!.userId
       );
 
       if (!hasPermission) {
@@ -88,5 +92,5 @@ export const GET = withAuth(
         { status: 500 }
       );
     }
-  }
-);
+  })(req);
+}

@@ -16,7 +16,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const clientIp = req.ip || 'unknown';
+    const clientIp =
+      req.headers.get('x-forwarded-for') ||
+      req.headers.get('x-real-ip') ||
+      'unknown';
 
     if (!generalRateLimit(clientIp)) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });

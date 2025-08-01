@@ -1,11 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuthAndCors, AuthenticatedRequest } from '@/lib/middleware';
 
-export const POST = withAuthAndCors(
-  async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return withAuthAndCors(async (authReq: AuthenticatedRequest) => {
     try {
-      const promptId = parseInt(params.id);
+      const { id } = await params;
+      const promptId = parseInt(id);
 
       if (!promptId || isNaN(promptId)) {
         return NextResponse.json(
@@ -21,7 +25,7 @@ export const POST = withAuthAndCors(
           deleted_at: null,
           OR: [
             { visibility: 'PUBLIC' },
-            { owner_id: req.user!.userId },
+            { owner_id: authReq.user!.userId },
             {
               AND: [
                 { visibility: 'TEAM' },
@@ -30,7 +34,7 @@ export const POST = withAuthAndCors(
                   team: {
                     members: {
                       some: {
-                        user_id: req.user!.userId,
+                        user_id: authReq.user!.userId,
                       },
                     },
                   },
@@ -73,5 +77,5 @@ export const POST = withAuthAndCors(
         { status: 500 }
       );
     }
-  }
-);
+  })(req);
+}

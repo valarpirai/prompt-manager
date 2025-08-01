@@ -1,10 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AuthForm from '@/components/AuthForm';
 
-export default function ExtensionLoginPage() {
+interface ChromeRuntime {
+  sendMessage: (
+    message: unknown,
+    callback?: (response: { success?: boolean }) => void
+  ) => void;
+}
+
+interface ExtendedGlobalThis {
+  chrome?: {
+    runtime?: ChromeRuntime;
+  };
+}
+
+function ExtensionLoginContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -70,12 +83,13 @@ export default function ExtensionLoginPage() {
         // This works when the extension opens a new tab
         try {
           // Try to communicate directly with the extension
+          const extendedGlobal = globalThis as ExtendedGlobalThis;
           if (
-            typeof chrome !== 'undefined' &&
-            chrome.runtime &&
-            chrome.runtime.sendMessage
+            typeof extendedGlobal.chrome !== 'undefined' &&
+            extendedGlobal.chrome.runtime &&
+            extendedGlobal.chrome.runtime.sendMessage
           ) {
-            chrome.runtime.sendMessage(
+            extendedGlobal.chrome.runtime.sendMessage(
               {
                 type: 'SAVE_AUTH_TOKENS',
                 accessToken: result.accessToken,
@@ -164,5 +178,13 @@ export default function ExtensionLoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ExtensionLoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ExtensionLoginContent />
+    </Suspense>
   );
 }

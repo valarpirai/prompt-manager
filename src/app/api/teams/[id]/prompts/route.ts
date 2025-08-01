@@ -16,11 +16,12 @@ async function checkTeamAdminPermission(teamId: number, userId: number) {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const teamId = parseInt(params.id);
+      const { id } = await params;
+      const teamId = parseInt(id);
 
       if (isNaN(teamId)) {
         return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 });

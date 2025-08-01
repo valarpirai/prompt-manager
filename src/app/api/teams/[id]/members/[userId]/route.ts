@@ -14,14 +14,15 @@ async function checkTeamAdminPermission(teamId: number, userId: number) {
   return !!teamMember;
 }
 
-export const PUT = withAuth(
-  async (
-    req: AuthenticatedRequest,
-    { params }: { params: { id: string; userId: string } }
-  ) => {
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string; userId: string }> }
+) {
+  return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const teamId = parseInt(params.id);
-      const targetUserId = parseInt(params.userId);
+      const { id, userId } = await params;
+      const teamId = parseInt(id);
+      const targetUserId = parseInt(userId);
 
       if (isNaN(teamId) || isNaN(targetUserId)) {
         return NextResponse.json(
@@ -32,7 +33,7 @@ export const PUT = withAuth(
 
       const hasPermission = await checkTeamAdminPermission(
         teamId,
-        req.user!.userId
+        authReq.user!.userId
       );
       if (!hasPermission) {
         return NextResponse.json(
@@ -41,7 +42,7 @@ export const PUT = withAuth(
         );
       }
 
-      const { role } = await req.json();
+      const { role } = await authReq.json();
 
       if (!role || !['ADMIN', 'VIEWER'].includes(role)) {
         return NextResponse.json(
@@ -110,17 +111,18 @@ export const PUT = withAuth(
         { status: 500 }
       );
     }
-  }
-);
+  })(req);
+}
 
-export const DELETE = withAuth(
-  async (
-    req: AuthenticatedRequest,
-    { params }: { params: { id: string; userId: string } }
-  ) => {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string; userId: string }> }
+) {
+  return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const teamId = parseInt(params.id);
-      const targetUserId = parseInt(params.userId);
+      const { id, userId } = await params;
+      const teamId = parseInt(id);
+      const targetUserId = parseInt(userId);
 
       if (isNaN(teamId) || isNaN(targetUserId)) {
         return NextResponse.json(
@@ -130,10 +132,10 @@ export const DELETE = withAuth(
       }
 
       // Allow users to remove themselves OR admins to remove others
-      const isRemovingSelf = targetUserId === req.user!.userId;
+      const isRemovingSelf = targetUserId === authReq.user!.userId;
       const hasAdminPermission = await checkTeamAdminPermission(
         teamId,
-        req.user!.userId
+        authReq.user!.userId
       );
 
       if (!isRemovingSelf && !hasAdminPermission) {
@@ -194,5 +196,5 @@ export const DELETE = withAuth(
         { status: 500 }
       );
     }
-  }
-);
+  })(req);
+}

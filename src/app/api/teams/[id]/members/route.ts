@@ -15,10 +15,14 @@ async function checkTeamAdminPermission(teamId: number, userId: number) {
   return !!teamMember;
 }
 
-export const POST = withAuth(
-  async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const teamId = parseInt(params.id);
+      const { id } = await params;
+      const teamId = parseInt(id);
 
       if (isNaN(teamId)) {
         return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 });
@@ -26,7 +30,7 @@ export const POST = withAuth(
 
       const hasPermission = await checkTeamAdminPermission(
         teamId,
-        req.user!.userId
+        authReq.user!.userId
       );
       if (!hasPermission) {
         return NextResponse.json(
@@ -35,7 +39,7 @@ export const POST = withAuth(
         );
       }
 
-      const { email, role = 'VIEWER' } = await req.json();
+      const { email, role = 'VIEWER' } = await authReq.json();
 
       if (!email) {
         return NextResponse.json(
@@ -124,5 +128,5 @@ export const POST = withAuth(
         { status: 500 }
       );
     }
-  }
-);
+  })(req);
+}

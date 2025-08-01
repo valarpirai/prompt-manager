@@ -16,12 +16,13 @@ async function checkTeamAdminPermission(teamId: number, userId: number) {
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string; promptId: string } }
+  { params }: { params: Promise<{ id: string; promptId: string }> }
 ) {
   return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const teamId = parseInt(params.id);
-      const promptId = parseInt(params.promptId);
+      const { id, promptId: promptIdParam } = await params;
+      const teamId = parseInt(id);
+      const promptId = parseInt(promptIdParam);
 
       if (isNaN(teamId) || isNaN(promptId)) {
         return NextResponse.json(

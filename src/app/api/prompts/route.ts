@@ -197,7 +197,7 @@ export const GET = withAuthAndCors(async (req: AuthenticatedRequest) => {
       };
 
       // Combine with existing conditions
-      if (where.AND) {
+      if (where.AND && Array.isArray(where.AND)) {
         where.AND.push(tagsCondition);
       } else if (where.OR) {
         where.AND = [{ OR: where.OR }, tagsCondition];

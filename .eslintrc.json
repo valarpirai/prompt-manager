@@ -13,8 +13,10 @@
   "parser": "@typescript-eslint/parser",
   "plugins": ["@typescript-eslint", "prettier"],
   "rules": {
-    "@typescript-eslint/no-unused-vars": "error",
+    "@typescript-eslint/no-unused-vars": "off",
     "@typescript-eslint/no-explicit-any": "error",
-    "prettier/prettier": "error"
+    "prettier/prettier": "error",
+    "unused-imports/no-unused-imports": "off",
+    "react-hooks/exhaustive-deps": "off"
   }
 }

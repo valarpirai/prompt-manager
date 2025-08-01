@@ -23,7 +23,6 @@ export async function GET(req: NextRequest) {
 
     const verification = await prisma.emailVerification.findUnique({
       where: { token },
-      include: { user: true },
     });
 
     if (!verification) {
