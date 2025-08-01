@@ -114,18 +114,36 @@ class PromptManagerAPI {
 
   async getPromptByTitle(title) {
     try {
-      const data = await this.makeRequest(
+      const response = await this.makeRequest(
         `/api/prompts?title=${encodeURIComponent(title)}&exact=true`
       );
       
-      if (data && data.length > 0) {
+      console.log('getPromptByTitle response:', response);
+      
+      if (response && response.prompts && response.prompts.length > 0) {
         // Return the most recent accessible prompt
-        return data.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
+        const prompts = response.prompts;
+        return prompts.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
       }
       
       return null;
     } catch (error) {
+      console.error('Error in getPromptByTitle:', error);
       throw error;
+    }
+  }
+
+  async getPromptTitles(query = '', limit = 20) {
+    try {
+      const params = new URLSearchParams();
+      if (query) params.append('q', query);
+      params.append('limit', limit.toString());
+      
+      const data = await this.makeRequest(`/api/prompts/titles?${params}`);
+      return data.prompts || [];
+    } catch (error) {
+      console.error('Error fetching prompt titles:', error);
+      return [];
     }
   }
 
@@ -194,6 +212,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   } else if (request.type === 'SAVE_AUTH_TOKENS') {
     handleSaveAuthTokens(request, sendResponse);
+    return true;
+  } else if (request.type === 'GET_PROMPT_TITLES') {
+    handleGetPromptTitles(request, sendResponse);
     return true;
   }
 });
@@ -301,6 +322,41 @@ async function handleSaveAuthTokens(request, sendResponse) {
   } catch (error) {
     console.error('Error saving auth tokens:', error);
     sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleGetPromptTitles(request, sendResponse) {
+  try {
+    const settings = await api.getSettings();
+    
+    if (!settings.isEnabled) {
+      sendResponse({ 
+        success: false, 
+        error: 'Extension is disabled' 
+      });
+      return;
+    }
+
+    if (!settings.isLoggedIn) {
+      sendResponse({ 
+        success: false, 
+        error: 'Not authenticated',
+        needsAuth: true 
+      });
+      return;
+    }
+
+    const prompts = await api.getPromptTitles(request.query, request.limit);
+    sendResponse({ 
+      success: true, 
+      prompts 
+    });
+  } catch (error) {
+    console.error('Error fetching prompt titles:', error);
+    sendResponse({ 
+      success: false, 
+      error: 'Failed to fetch prompt titles' 
+    });
   }
 }
 
