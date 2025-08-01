@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import Link from 'next/link'
+import ClonePromptModal from '@/components/ClonePromptModal'
+import LinkTeamModal from '@/components/LinkTeamModal'
 
 interface Prompt {
   id: number
@@ -39,6 +41,14 @@ export default function PromptsPage() {
     visibility: 'all',
     sortBy: 'updated_at',
     sortOrder: 'desc'
+  })
+  const [cloneModal, setCloneModal] = useState<{ isOpen: boolean; prompt: Prompt | null }>({
+    isOpen: false,
+    prompt: null
+  })
+  const [linkTeamModal, setLinkTeamModal] = useState<{ isOpen: boolean; prompt: Prompt | null }>({
+    isOpen: false,
+    prompt: null
   })
   const router = useRouter()
 
@@ -104,6 +114,59 @@ export default function PromptsPage() {
       }
     } catch (error) {
       console.error('Error deleting prompt:', error)
+    }
+  }
+
+  const handleClone = async (title: string) => {
+    if (!cloneModal.prompt) return
+
+    try {
+      const token = localStorage.getItem('accessToken')
+      const response = await fetch(`/api/prompts/${cloneModal.prompt.id}/clone`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ title })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        router.push(`/prompts/${data.prompt.id}`)
+      } else {
+        const errorData = await response.json()
+        alert(errorData.error || 'Failed to clone prompt')
+      }
+    } catch (error) {
+      console.error('Error cloning prompt:', error)
+      alert('An error occurred while cloning the prompt')
+    }
+  }
+
+  const handleLinkTeam = async (teamId: number | null) => {
+    if (!linkTeamModal.prompt) return
+
+    try {
+      const token = localStorage.getItem('accessToken')
+      const response = await fetch(`/api/prompts/${linkTeamModal.prompt.id}/link-team`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ teamId })
+      })
+
+      if (response.ok) {
+        fetchPrompts() // Refresh the list to show updated team info
+      } else {
+        const errorData = await response.json()
+        alert(errorData.error || 'Failed to update team link')
+      }
+    } catch (error) {
+      console.error('Error linking to team:', error)
+      alert('An error occurred while updating the team link')
     }
   }
 
@@ -261,12 +324,39 @@ export default function PromptsPage() {
                                 </div>
                               </>
                             )}
+                            {prompt.team && (
+                              <>
+                                <span>•</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                  Team: {prompt.team.name}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => setCloneModal({ isOpen: true, prompt })}
+                            className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            title="Clone prompt"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => setLinkTeamModal({ isOpen: true, prompt })}
+                            className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            title="Link to team"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                            </svg>
+                          </button>
                           <Link
                             href={`/prompts/${prompt.id}/edit`}
                             className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            title="Edit prompt"
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -275,6 +365,7 @@ export default function PromptsPage() {
                           <button
                             onClick={() => handleDelete(prompt.id)}
                             className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            title="Delete prompt"
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -378,6 +469,22 @@ export default function PromptsPage() {
           </div>
         </div>
       </main>
+
+      {/* Modals */}
+      <ClonePromptModal
+        isOpen={cloneModal.isOpen}
+        onClose={() => setCloneModal({ isOpen: false, prompt: null })}
+        onClone={handleClone}
+        originalTitle={cloneModal.prompt?.title || ''}
+      />
+
+      <LinkTeamModal
+        isOpen={linkTeamModal.isOpen}
+        onClose={() => setLinkTeamModal({ isOpen: false, prompt: null })}
+        onLink={handleLinkTeam}
+        currentTeamId={linkTeamModal.prompt?.team?.id}
+        promptTitle={linkTeamModal.prompt?.title || ''}
+      />
     </div>
   )
 }

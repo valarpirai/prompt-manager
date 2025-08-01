@@ -129,10 +129,13 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       return NextResponse.json({ error: tagsValidation.error }, { status: 400 })
     }
 
+    let validatedTeamId = null
     if (teamId) {
+      validatedTeamId = typeof teamId === 'string' ? parseInt(teamId) : teamId
+      
       const teamMember = await prisma.teamMember.findFirst({
         where: {
-          team_id: teamId,
+          team_id: validatedTeamId,
           user_id: req.user!.userId,
           role: {
             in: ['ADMIN', 'EDITOR']
@@ -162,7 +165,7 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
         visibility: visibility as Visibility,
         owner_id: req.user!.userId,
         created_by: req.user!.userId,
-        team_id: teamId ? parseInt(teamId) : null,
+        team_id: validatedTeamId,
         tags: {
           connect: tagRecords.map(tag => ({ id: tag.id }))
         }

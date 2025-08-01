@@ -80,11 +80,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         }
       })
 
-      await prisma.prompt.update({
-        where: { id: promptId },
-        data: { usage_count: { increment: 1 } }
-      })
-
       return NextResponse.json({ prompt: fullPrompt })
 
     } catch (error) {
