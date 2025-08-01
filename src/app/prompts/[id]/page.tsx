@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Navigation from '@/components/Navigation'
+import VoteButtons from '@/components/VoteButtons'
 import Link from 'next/link'
 
 interface Prompt {
@@ -10,8 +11,10 @@ interface Prompt {
   title: string
   prompt_text: string
   usage_count: number
+  upvote_count: number
+  downvote_count: number
   version: number
-  visibility: 'PUBLIC' | 'PRIVATE'
+  visibility: 'PUBLIC' | 'PRIVATE' | 'TEAM'
   created_at: string
   updated_at: string
   owner: {
@@ -26,6 +29,9 @@ interface Prompt {
   tags: {
     id: number
     name: string
+  }[]
+  votes: {
+    vote_type: 'UPVOTE' | 'DOWNVOTE'
   }[]
 }
 
@@ -215,6 +221,8 @@ export default function PromptViewPage() {
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       prompt.visibility === 'PUBLIC'
                         ? 'bg-green-100 text-green-800'
+                        : prompt.visibility === 'TEAM'
+                        ? 'bg-blue-100 text-blue-800'
                         : 'bg-gray-100 text-gray-800'
                     }`}>
                       {prompt.visibility}
@@ -237,6 +245,16 @@ export default function PromptViewPage() {
                     {prompt.updated_at !== prompt.created_at && (
                       <span> • Updated {formatDate(prompt.updated_at)}</span>
                     )}
+                  </div>
+                  <div className="mt-3">
+                    <VoteButtons
+                      promptId={prompt.id}
+                      initialUpvoteCount={prompt.upvote_count}
+                      initialDownvoteCount={prompt.downvote_count}
+                      initialUserVote={prompt.votes.length > 0 ? prompt.votes[0].vote_type : null}
+                      isOwner={currentUser?.id === prompt.owner.id}
+                      size="medium"
+                    />
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">

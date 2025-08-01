@@ -22,28 +22,38 @@ async function checkPromptPermission(promptId: number, userId: number, action: '
     return { hasPermission: false, prompt: null, error: 'Prompt not found' }
   }
 
-  if (prompt.visibility === 'PUBLIC' && action === 'view') {
-    return { hasPermission: true, prompt, error: null }
-  }
-
+  // Owner always has full access
   if (prompt.owner_id === userId) {
     return { hasPermission: true, prompt, error: null }
   }
 
-  if (prompt.team && prompt.team.members.length > 0) {
+  // Public prompts: anyone can view, only owner can edit/delete
+  if (prompt.visibility === 'PUBLIC' && action === 'view') {
+    return { hasPermission: true, prompt, error: null }
+  }
+
+  // Team prompts: only team members can access based on their role
+  if (prompt.visibility === 'TEAM') {
+    if (!prompt.team_id || !prompt.team || prompt.team.members.length === 0) {
+      return { hasPermission: false, prompt: null, error: 'Team prompt is not properly configured' }
+    }
+    
     const member = prompt.team.members[0]
     if (action === 'view' || (action === 'edit' && ['ADMIN', 'EDITOR'].includes(member.role))) {
       return { hasPermission: true, prompt, error: null }
     }
   }
 
+  // Private prompts: only owner has access (already checked above)
+
   return { hasPermission: false, prompt: null, error: 'Permission denied' }
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const promptId = parseInt(params.id)
+      const { id } = await params
+      const promptId = parseInt(id)
 
       if (isNaN(promptId)) {
         return NextResponse.json({ error: 'Invalid prompt ID' }, { status: 400 })
@@ -76,6 +86,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
               id: true,
               name: true
             }
+          },
+          votes: {
+            where: {
+              user_id: authReq.user!.userId
+            },
+            select: {
+              vote_type: true
+            }
           }
         }
       })
@@ -89,10 +107,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   })(req)
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const promptId = parseInt(params.id)
+      const { id } = await params
+      const promptId = parseInt(id)
 
       if (isNaN(promptId)) {
         return NextResponse.json({ error: 'Invalid prompt ID' }, { status: 400 })
@@ -104,7 +123,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         return NextResponse.json({ error }, { status: error === 'Prompt not found' ? 404 : 403 })
       }
 
-      const { title, promptText, tags = [], visibility } = await authReq.json()
+      const { title, promptText, tags = [], visibility, teamId } = await authReq.json()
 
       const titleValidation = validatePromptTitle(title)
       if (!titleValidation.valid) {
@@ -119,6 +138,35 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       const tagsValidation = validateTags(tags)
       if (!tagsValidation.valid) {
         return NextResponse.json({ error: tagsValidation.error }, { status: 400 })
+      }
+
+      // Validate team assignment and visibility rules
+      if (visibility === 'PRIVATE' && teamId) {
+        return NextResponse.json({ error: 'Private prompts cannot be assigned to teams' }, { status: 400 })
+      }
+      
+      if (visibility === 'TEAM' && !teamId) {
+        return NextResponse.json({ error: 'Team ID is required for TEAM visibility' }, { status: 400 })
+      }
+
+      // Validate team permissions if teamId is provided
+      let validatedTeamId = null
+      if (teamId) {
+        validatedTeamId = typeof teamId === 'string' ? parseInt(teamId) : teamId
+        
+        const teamMember = await prisma.teamMember.findFirst({
+          where: {
+            team_id: validatedTeamId,
+            user_id: authReq.user!.userId,
+            role: {
+              in: ['ADMIN', 'EDITOR']
+            }
+          }
+        })
+
+        if (!teamMember) {
+          return NextResponse.json({ error: 'You do not have permission to assign prompts to this team' }, { status: 403 })
+        }
       }
 
       const tagRecords = await Promise.all(
@@ -141,6 +189,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
             prompt_text: promptText,
             version: newVersion,
             ...(visibility && { visibility: visibility as Visibility }),
+            team_id: validatedTeamId,
             tags: {
               set: tagRecords.map(tag => ({ id: tag.id }))
             }
@@ -196,10 +245,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   })(req)
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const promptId = parseInt(params.id)
+      const { id } = await params
+      const promptId = parseInt(id)
 
       if (isNaN(promptId)) {
         return NextResponse.json({ error: 'Invalid prompt ID' }, { status: 400 })

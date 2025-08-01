@@ -1,13 +1,24 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import AuthForm from '@/components/AuthForm'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (searchParams.get('registered') === 'true') {
+      setSuccessMessage('Account created successfully! Please login to get started.')
+    }
+    if (searchParams.get('verified') === 'true') {
+      setSuccessMessage('Email verified successfully! Please login to continue.')
+    }
+  }, [searchParams])
 
   const handleLogin = async (data: { email: string; password: string }) => {
     setLoading(true)
@@ -35,11 +46,7 @@ export default function LoginPage() {
       localStorage.setItem('refreshToken', result.refreshToken)
       localStorage.setItem('user', JSON.stringify(result.user))
 
-      if (!result.user.is_verified) {
-        router.push('/verify-email')
-      } else {
-        router.push('/dashboard')
-      }
+      router.push('/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
@@ -53,6 +60,7 @@ export default function LoginPage() {
       onSubmit={handleLogin}
       loading={loading}
       error={error}
+      success={successMessage}
     />
   )
 }

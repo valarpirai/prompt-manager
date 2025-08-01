@@ -17,7 +17,7 @@ export default function NewPromptPage() {
     title: '',
     promptText: '',
     tags: [] as string[],
-    visibility: 'PRIVATE' as 'PUBLIC' | 'PRIVATE',
+    visibility: 'PRIVATE' as 'PUBLIC' | 'PRIVATE' | 'TEAM',
     teamId: ''
   })
   const [tagInput, setTagInput] = useState('')
@@ -69,6 +69,11 @@ export default function NewPromptPage() {
       return
     }
 
+    if (formData.visibility === 'TEAM' && !formData.teamId) {
+      setError('Please select a team for TEAM visibility')
+      return
+    }
+
     setLoading(true)
     try {
       const token = localStorage.getItem('accessToken')
@@ -103,7 +108,17 @@ export default function NewPromptPage() {
   }
 
   const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    const newFormData = { ...formData, [field]: value }
+    
+    // Enforce visibility-team constraints
+    if (field === 'visibility') {
+      if (value === 'PRIVATE') {
+        // Clear team assignment for private prompts
+        newFormData.teamId = ''
+      }
+    }
+    
+    setFormData(newFormData)
     if (error) {
       setError('')
     }
@@ -246,14 +261,15 @@ export default function NewPromptPage() {
                     onChange={(e) => handleChange('visibility', e.target.value)}
                   >
                     <option value="PRIVATE">Private - Only visible to you</option>
-                    <option value="PUBLIC">Public - Visible to everyone</option>
+                    <option value="PUBLIC">Public - Visible to everyone, only you can edit</option>
+                    <option value="TEAM">Team - Only team members can access</option>
                   </select>
                 </div>
 
-                {teams.length > 0 && (
+                {teams.length > 0 && formData.visibility !== 'PRIVATE' && (
                   <div>
                     <label htmlFor="teamId" className="block text-sm font-medium text-gray-700">
-                      Assign to Team (Optional)
+                      {formData.visibility === 'TEAM' ? 'Select Team *' : 'Assign to Team (Optional)'}
                     </label>
                     <select
                       id="teamId"
@@ -261,7 +277,7 @@ export default function NewPromptPage() {
                       value={formData.teamId}
                       onChange={(e) => handleChange('teamId', e.target.value)}
                     >
-                      <option value="">No team</option>
+                      <option value="">{formData.visibility === 'TEAM' ? 'Select a team...' : 'No team'}</option>
                       {teams.map((team) => (
                         <option key={team.id} value={team.id.toString()}>
                           {team.name} ({team.userRole})
@@ -269,8 +285,24 @@ export default function NewPromptPage() {
                       ))}
                     </select>
                     <p className="mt-1 text-xs text-gray-500">
-                      Only teams where you can edit are shown.
+                      {formData.visibility === 'TEAM' 
+                        ? 'Required for team visibility. Only teams where you can edit are shown.'
+                        : 'Optional for public prompts. Only teams where you can edit are shown.'
+                      }
                     </p>
+                  </div>
+                )}
+                
+                {formData.visibility === 'PRIVATE' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Team Assignment
+                    </label>
+                    <div className="mt-1 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                      <p className="text-sm text-gray-600">
+                        Private prompts cannot be assigned to teams. Only you will have access to this prompt.
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>

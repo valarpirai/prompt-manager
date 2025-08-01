@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import Link from 'next/link'
+import DashboardEmailNotification from '@/components/DashboardEmailNotification'
 
 interface User {
   id: number
@@ -28,6 +29,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
   const [prompts, setPrompts] = useState<Prompt[]>([])
   const [loading, setLoading] = useState(true)
+  const [verificationMessage, setVerificationMessage] = useState('')
   const [stats, setStats] = useState({
     totalPrompts: 0,
     publicPrompts: 0,
@@ -45,12 +47,25 @@ export default function DashboardPage() {
     }
 
     const parsedUser = JSON.parse(userData)
-    if (!parsedUser.is_verified) {
-      router.push('/verify-email')
-      return
+    
+    // Check for verification success
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('verified') === 'true') {
+      // Update user verification status
+      const updatedUser = { ...parsedUser, is_verified: true }
+      setUser(updatedUser)
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+      setVerificationMessage('Email verified successfully! Your account is now fully activated.')
+      
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname)
+      
+      // Hide message after 5 seconds
+      setTimeout(() => setVerificationMessage(''), 5000)
+    } else {
+      setUser(parsedUser)
     }
-
-    setUser(parsedUser)
+    
     fetchUserPrompts(token)
   }, [router])
 
@@ -96,6 +111,52 @@ export default function DashboardPage() {
       
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
+          {/* Verification Success Message */}
+          {verificationMessage && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-green-800">
+                    {verificationMessage}
+                  </p>
+                </div>
+                <div className="ml-auto pl-3">
+                  <div className="-mx-1.5 -my-1.5">
+                    <button
+                      onClick={() => setVerificationMessage('')}
+                      className="inline-flex bg-green-50 rounded-md p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-600"
+                    >
+                      <span className="sr-only">Dismiss</span>
+                      <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Email Verification Notification */}
+          <DashboardEmailNotification 
+            userEmail={user.email} 
+            isVerified={user.is_verified}
+            onVerificationUpdate={(isVerified) => {
+              setUser(prev => prev ? { ...prev, is_verified: isVerified } : null)
+              // Update localStorage as well
+              const userData = localStorage.getItem('user')
+              if (userData) {
+                const updatedUser = { ...JSON.parse(userData), is_verified: isVerified }
+                localStorage.setItem('user', JSON.stringify(updatedUser))
+              }
+            }}
+          />
+
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900">
               Welcome back, {user.display_name || user.email.split('@')[0]}!

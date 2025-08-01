@@ -42,7 +42,7 @@ export default function SignupPage() {
 
       setSuccess(true)
       setTimeout(() => {
-        router.push('/verify-email?email=' + encodeURIComponent(data.email))
+        router.push('/login?registered=true')
       }, 2000)
 
     } catch (err) {
@@ -63,13 +63,16 @@ export default function SignupPage() {
               </svg>
             </div>
             <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-              Account Created Successfully!
+              Welcome to Prompt Manager!
             </h2>
             <p className="mt-2 text-center text-sm text-gray-600">
-              Please check your email for a verification link to complete your account setup.
+              Your account has been created successfully. You can start using the app right away!
+            </p>
+            <p className="mt-1 text-center text-xs text-gray-500">
+              We've sent a verification email to secure your account - you can verify it later.
             </p>
             <p className="mt-4 text-center text-xs text-gray-500">
-              Redirecting you to the verification page...
+              Redirecting you to login...
             </p>
           </div>
         </div>

@@ -24,13 +24,19 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
         { visibility: 'PUBLIC' },
         { owner_id: req.user!.userId },
         {
-          team: {
-            members: {
-              some: {
-                user_id: req.user!.userId
+          AND: [
+            { visibility: 'TEAM' },
+            { team_id: { not: null } },
+            {
+              team: {
+                members: {
+                  some: {
+                    user_id: req.user!.userId
+                  }
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -88,6 +94,14 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
               id: true,
               name: true
             }
+          },
+          votes: {
+            where: {
+              user_id: req.user!.userId
+            },
+            select: {
+              vote_type: true
+            }
           }
         }
       }),
@@ -127,6 +141,15 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
     const tagsValidation = validateTags(tags)
     if (!tagsValidation.valid) {
       return NextResponse.json({ error: tagsValidation.error }, { status: 400 })
+    }
+
+    // Validate team assignment and visibility rules
+    if (visibility === 'PRIVATE' && teamId) {
+      return NextResponse.json({ error: 'Private prompts cannot be assigned to teams' }, { status: 400 })
+    }
+    
+    if (visibility === 'TEAM' && !teamId) {
+      return NextResponse.json({ error: 'Team ID is required for TEAM visibility' }, { status: 400 })
     }
 
     let validatedTeamId = null
@@ -213,6 +236,14 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
 
   } catch (error) {
     console.error('Create prompt error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 })
   }
 })

@@ -7,6 +7,12 @@ import { generalRateLimit } from '@/lib/middleware'
 
 export async function POST(req: NextRequest) {
   try {
+    // Validate required environment variables
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET environment variable is not set')
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+
     const clientIp = req.ip || 'unknown'
     
     if (!generalRateLimit(clientIp)) {
@@ -41,37 +47,47 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await hashPassword(password)
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        display_name: displayName,
-        is_verified: false,
-      },
-      select: {
-        id: true,
-        email: true,
-        display_name: true,
-        is_verified: true,
-      }
+    // Create user and verification token in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          display_name: displayName?.trim() || null,
+          is_verified: false,
+        },
+        select: {
+          id: true,
+          email: true,
+          display_name: true,
+          is_verified: true,
+        }
+      })
+
+      const verificationToken = generateEmailVerificationToken()
+      
+      await tx.emailVerification.create({
+        data: {
+          user_id: user.id,
+          token: verificationToken,
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        }
+      })
+
+      return { user, verificationToken }
     })
 
-    const verificationToken = generateEmailVerificationToken()
-    
-    await prisma.emailVerification.create({
-      data: {
-        user_id: user.id,
-        token: verificationToken,
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-      }
-    })
+    const { user, verificationToken } = result
 
+    // Send verification email asynchronously (don't wait for it)
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-      try {
-        await sendVerificationEmail(email, verificationToken)
-      } catch (error) {
-        console.error('Failed to send verification email:', error)
-      }
+      setImmediate(async () => {
+        try {
+          await sendVerificationEmail(email, verificationToken)
+        } catch (error) {
+          console.error('Failed to send verification email:', error)
+        }
+      })
     }
 
     return NextResponse.json({
@@ -79,8 +95,24 @@ export async function POST(req: NextRequest) {
       user,
     }, { status: 201 })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Signup error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    
+    // Handle specific Prisma errors
+    if (error.code === 'P2002') {
+      return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 })
+    }
+    
+    // Handle other database errors
+    if (error.name === 'PrismaClientKnownRequestError') {
+      console.error('Prisma error:', error.message, error.code)
+      return NextResponse.json({ error: 'Database error occurred' }, { status: 500 })
+    }
+    
+    // Handle validation or other errors
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    }, { status: 500 })
   }
 }

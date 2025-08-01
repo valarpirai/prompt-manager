@@ -7,6 +7,7 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
     const { searchParams } = new URL(req.url)
     const period = searchParams.get('period') || 'all-time' // 'all-time', '7days', '30days'
     const limit = parseInt(searchParams.get('limit') || '10')
+    const sortBy = searchParams.get('sortBy') || 'combined' // 'usage', 'upvotes', 'combined'
 
     let dateFilter: any = {}
 
@@ -20,16 +21,26 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
       dateFilter = { created_at: { gte: thirtyDaysAgo } }
     }
 
+    let orderBy: any = { usage_count: 'desc' }
+    
+    if (sortBy === 'upvotes') {
+      orderBy = { upvote_count: 'desc' }
+    } else if (sortBy === 'combined') {
+      // For combined score, we'll fetch all and sort in application
+      orderBy = [
+        { upvote_count: 'desc' },
+        { usage_count: 'desc' }
+      ]
+    }
+
     const popularPrompts = await prisma.prompt.findMany({
       where: {
         visibility: 'PUBLIC',
         deleted_at: null,
         ...dateFilter
       },
-      take: limit,
-      orderBy: {
-        usage_count: 'desc'
-      },
+      take: sortBy === 'combined' ? limit * 2 : limit,
+      orderBy,
       include: {
         owner: {
           select: {
@@ -43,11 +54,32 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
             id: true,
             name: true
           }
+        },
+        votes: {
+          where: {
+            user_id: req.user!.userId
+          },
+          select: {
+            vote_type: true
+          }
         }
       }
     })
 
-    const promptsWithPreview = popularPrompts.map(prompt => ({
+    let sortedPrompts = popularPrompts
+
+    if (sortBy === 'combined') {
+      // Calculate combined score: upvotes * 2 + usage_count
+      sortedPrompts = popularPrompts
+        .map(prompt => ({
+          ...prompt,
+          combined_score: (prompt.upvote_count * 2) + prompt.usage_count
+        }))
+        .sort((a, b) => b.combined_score - a.combined_score)
+        .slice(0, limit)
+    }
+
+    const promptsWithPreview = sortedPrompts.map(prompt => ({
       ...prompt,
       prompt_text_preview: prompt.prompt_text.length > 200 
         ? prompt.prompt_text.substring(0, 200) + '...'

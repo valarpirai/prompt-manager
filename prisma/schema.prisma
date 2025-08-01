@@ -26,6 +26,7 @@ model User {
   created_prompts Prompt[]       @relation("PromptCreator")
   team_members    TeamMember[]
   prompt_versions PromptVersion[]
+  prompt_votes    PromptVote[]
   
   @@map("users")
 }
@@ -35,6 +36,8 @@ model Prompt {
   title         String    @db.VarChar(100)
   prompt_text   String
   usage_count   Int       @default(0)
+  upvote_count  Int       @default(0)
+  downvote_count Int      @default(0)
   version       Int       @default(1)
   deleted_at    DateTime?
   visibility    Visibility @default(PRIVATE)
@@ -50,12 +53,14 @@ model Prompt {
   team          Team?     @relation(fields: [team_id], references: [id])
   tags          Tag[]     @relation("PromptTags")
   versions      PromptVersion[]
+  votes         PromptVote[]
   
   @@map("prompts")
   @@index([title])
   @@index([prompt_text])
   @@index([visibility])
   @@index([usage_count])
+  @@index([upvote_count])
   @@index([created_at])
 }
 
@@ -128,9 +133,31 @@ model EmailVerification {
   @@map("email_verifications")
 }
 
+model PromptVote {
+  id            Int       @id @default(autoincrement())
+  user_id       Int
+  prompt_id     Int
+  vote_type     VoteType
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  
+  // Relations
+  user          User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  prompt        Prompt    @relation(fields: [prompt_id], references: [id], onDelete: Cascade)
+  
+  @@map("prompt_votes")
+  @@unique([user_id, prompt_id])
+}
+
 enum Visibility {
   PUBLIC
   PRIVATE
+  TEAM
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
 }
 
 enum TeamRole {

@@ -35,10 +35,11 @@ async function checkTeamPermission(teamId: number, userId: number, requiredRole?
   }
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const teamId = parseInt(params.id)
+      const { id } = await params
+      const teamId = parseInt(id)
 
       if (isNaN(teamId)) {
         return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 })
@@ -120,10 +121,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   })(req)
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const teamId = parseInt(params.id)
+      const { id } = await params
+      const teamId = parseInt(id)
 
       if (isNaN(teamId)) {
         return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 })
@@ -194,10 +196,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   })(req)
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const teamId = parseInt(params.id)
+      const { id } = await params
+      const teamId = parseInt(id)
 
       if (isNaN(teamId)) {
         return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 })
