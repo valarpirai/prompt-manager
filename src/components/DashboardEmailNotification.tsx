@@ -68,7 +68,7 @@ export default function DashboardEmailNotification({
               </h3>
               <div className="mt-2 text-sm text-blue-700">
                 <p>
-                  We've sent a verification email to <strong>{userEmail}</strong>. 
+                  We&apos;ve sent a verification email to <strong>{userEmail}</strong>. 
                   Please check your inbox and click the verification link to secure your account.
                 </p>
                 {message && (

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { withAuth, withAuthAndCors, AuthenticatedRequest } from '@/lib/middleware'
 import { validatePromptTitle, validatePromptText, validateTags } from '@/lib/validation'
@@ -10,12 +10,12 @@ export const GET = withAuthAndCors(async (req: AuthenticatedRequest) => {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
     const search = searchParams.get('search') || ''
-    const visibility = searchParams.get('visibility') as Visibility | null
+    // const visibility = searchParams.get('visibility') as Visibility | null
     const teamId = searchParams.get('teamId')
     const tags = searchParams.get('tags')?.split(',').filter(Boolean) || []
     const sortBy = searchParams.get('sortBy') || 'created_at'
     const sortOrder = searchParams.get('sortOrder') || 'desc'
-    const ownerFilter = searchParams.get('owner')
+    // const ownerFilter = searchParams.get('owner')
     const filterType = searchParams.get('filterType')
     
     // Chrome extension support: exact title matching

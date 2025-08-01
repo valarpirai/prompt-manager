@@ -95,24 +95,24 @@ export async function POST(req: NextRequest) {
       user,
     }, { status: 201 })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Signup error:', error)
     
     // Handle specific Prisma errors
-    if (error.code === 'P2002') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 })
     }
     
     // Handle other database errors
-    if (error.name === 'PrismaClientKnownRequestError') {
-      console.error('Prisma error:', error.message, error.code)
+    if (error && typeof error === 'object' && 'name' in error && error.name === 'PrismaClientKnownRequestError') {
+      console.error('Prisma error:', error)
       return NextResponse.json({ error: 'Database error occurred' }, { status: 500 })
     }
     
     // Handle validation or other errors
     return NextResponse.json({ 
       error: 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: process.env.NODE_ENV === 'development' && error instanceof Error ? error.message : undefined
     }, { status: 500 })
   }
 }

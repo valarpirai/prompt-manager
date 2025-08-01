@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { withAuth, AuthenticatedRequest } from '@/lib/middleware'
 
@@ -9,7 +9,7 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
     const limit = parseInt(searchParams.get('limit') || '10')
     const sortBy = searchParams.get('sortBy') || 'combined' // 'usage', 'upvotes', 'combined'
 
-    let dateFilter: any = {}
+    let dateFilter: { created_at?: { gte: Date } } = {}
 
     if (period === '7days') {
       const sevenDaysAgo = new Date()
@@ -21,7 +21,7 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
       dateFilter = { created_at: { gte: thirtyDaysAgo } }
     }
 
-    let orderBy: any = { usage_count: 'desc' }
+    let orderBy: { usage_count?: 'desc' | 'asc'; upvote_count?: 'desc' | 'asc' } | Array<{ usage_count?: 'desc' | 'asc'; upvote_count?: 'desc' | 'asc' }> = { usage_count: 'desc' }
     
     if (sortBy === 'upvotes') {
       orderBy = { upvote_count: 'desc' }

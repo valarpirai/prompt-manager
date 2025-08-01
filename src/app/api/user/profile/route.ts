@@ -56,7 +56,7 @@ export const PUT = withAuth(async (req: AuthenticatedRequest) => {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const updateData: any = {}
+    const updateData: { display_name?: string | null; password?: string } = {}
 
     // Update display name if provided
     if (displayName !== undefined) {

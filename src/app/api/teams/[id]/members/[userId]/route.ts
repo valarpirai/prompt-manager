@@ -14,8 +14,7 @@ async function checkTeamAdminPermission(teamId: number, userId: number) {
   return !!teamMember
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string; userId: string } }) {
-  return withAuth(async (authReq: AuthenticatedRequest) => {
+export const PUT = withAuth(async (req: AuthenticatedRequest, { params }: { params: { id: string; userId: string } }) => {
     try {
       const teamId = parseInt(params.id)
       const targetUserId = parseInt(params.userId)
@@ -24,12 +23,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string; 
         return NextResponse.json({ error: 'Invalid team or user ID' }, { status: 400 })
       }
 
-      const hasPermission = await checkTeamAdminPermission(teamId, authReq.user!.userId)
+      const hasPermission = await checkTeamAdminPermission(teamId, req.user!.userId)
       if (!hasPermission) {
         return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
       }
 
-      const { role } = await authReq.json()
+      const { role } = await req.json()
 
       if (!role || !['ADMIN', 'VIEWER'].includes(role)) {
         return NextResponse.json({ error: 'Valid role is required' }, { status: 400 })
@@ -87,11 +86,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string; 
       console.error('Update team member error:', error)
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
-  })(req)
-}
+});
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string; userId: string } }) {
-  return withAuth(async (authReq: AuthenticatedRequest) => {
+export const DELETE = withAuth(async (req: AuthenticatedRequest, { params }: { params: { id: string; userId: string } }) => {
     try {
       const teamId = parseInt(params.id)
       const targetUserId = parseInt(params.userId)
@@ -101,8 +98,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       }
 
       // Allow users to remove themselves OR admins to remove others
-      const isRemovingSelf = targetUserId === authReq.user!.userId
-      const hasAdminPermission = await checkTeamAdminPermission(teamId, authReq.user!.userId)
+      const isRemovingSelf = targetUserId === req.user!.userId
+      const hasAdminPermission = await checkTeamAdminPermission(teamId, req.user!.userId)
 
       if (!isRemovingSelf && !hasAdminPermission) {
         return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
@@ -149,5 +146,4 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       console.error('Remove team member error:', error)
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
-  })(req)
-}
+});

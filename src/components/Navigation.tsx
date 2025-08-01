@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { logout, User } from '@/lib/auth-client'
 
 export default function Navigation() {
   const [user, setUser] = useState<User | null>(null)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const router = useRouter()
   const pathname = usePathname()
 
   useEffect(() => {

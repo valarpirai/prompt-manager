@@ -40,7 +40,7 @@ export default function PromptViewPage() {
   const [loading, setLoading] = useState(true)
   const [copying, setCopying] = useState(false)
   const [error, setError] = useState('')
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<{ id: number; email: string } | null>(null)
   const router = useRouter()
   const params = useParams()
   const promptId = params.id as string

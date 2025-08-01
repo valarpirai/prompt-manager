@@ -93,7 +93,7 @@ export default function LinkTeamModal({ isOpen, onClose, onLink, currentTeamId, 
           
           <div className="mb-4">
             <p className="text-sm text-gray-600">
-              Link "<strong>{promptTitle}</strong>" to a team for collaboration.
+              Link &quot;<strong>{promptTitle}</strong>&quot; to a team for collaboration.
             </p>
           </div>
 

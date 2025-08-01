@@ -203,7 +203,7 @@ export default function EditTeamPage() {
               <h1 className="text-2xl font-bold text-gray-900">Edit Team</h1>
             </div>
             <p className="mt-1 text-sm text-gray-600">
-              Update your team's information and settings.
+              Update your team&apos;s information and settings.
             </p>
           </div>
 
@@ -244,7 +244,7 @@ export default function EditTeamPage() {
                   placeholder="Optional description of your team's purpose..."
                 />
                 <p className="mt-1 text-xs text-gray-500 flex justify-between">
-                  <span>Optional description of your team's purpose and goals.</span>
+                  <span>Optional description of your team&apos;s purpose and goals.</span>
                   <span>{description.length}/500</span>
                 </p>
               </div>

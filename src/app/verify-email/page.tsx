@@ -165,9 +165,9 @@ function VerifyEmailContent() {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             {email ? (
-              <>We've sent a verification link to <strong>{email}</strong></>
+              <>We&apos;ve sent a verification link to <strong>{email}</strong></>
             ) : (
-              'We\'ve sent you a verification link'
+              <>We&apos;ve sent you a verification link</>
             )}
           </p>
           <p className="mt-4 text-center text-xs text-gray-500">

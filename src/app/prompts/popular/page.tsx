@@ -223,7 +223,7 @@ export default function PopularPromptsPage() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">How are prompts ranked?</h3>
             <div className="prose prose-sm text-gray-600">
               <p>
-                Popular prompts are ranked based on their usage count - how many times they've been viewed or copied by users.
+                Popular prompts are ranked based on their usage count - how many times they&apos;ve been viewed or copied by users.
                 The ranking helps you discover high-quality, battle-tested prompts that the community finds valuable.
               </p>
               <ul className="mt-4 space-y-2">

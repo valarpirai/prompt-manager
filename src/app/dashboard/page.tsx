@@ -157,7 +157,7 @@ export default function DashboardPage() {
               Welcome back, {user.display_name || user.email.split('@')[0]}!
             </h1>
             <p className="mt-1 text-sm text-gray-600">
-              Here's what's happening with your prompts today.
+              Here&apos;s what&apos;s happening with your prompts today.
             </p>
           </div>
 

@@ -34,7 +34,7 @@ export default function EditPromptPage() {
   })
   const [tagInput, setTagInput] = useState('')
   const [error, setError] = useState('')
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<{ id: number; email: string } | null>(null)
   const router = useRouter()
   const params = useParams()
   const promptId = params.id as string
@@ -83,7 +83,7 @@ export default function EditPromptPage() {
         setFormData({
           title: prompt.title,
           promptText: prompt.prompt_text,
-          tags: prompt.tags.map((tag: any) => tag.name),
+          tags: prompt.tags.map((tag: { id: number; name: string }) => tag.name),
           visibility: prompt.visibility,
           teamId: prompt.team?.id?.toString() || ''
         })

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { withAuth, AuthenticatedRequest } from '@/lib/middleware'
 
@@ -47,8 +47,7 @@ async function checkTeamMembership(teamId: number, userId: number) {
   return { hasPermission: true, team: member.team, error: null }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  return withAuth(async (authReq: AuthenticatedRequest) => {
+export const PUT = withAuth(async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
     try {
       const promptId = parseInt(params.id)
 
@@ -56,10 +55,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         return NextResponse.json({ error: 'Invalid prompt ID' }, { status: 400 })
       }
 
-      const { teamId } = await authReq.json()
+      const { teamId } = await req.json()
 
       // Check if user owns the prompt
-      const promptCheck = await checkPromptOwnership(promptId, authReq.user!.userId)
+      const promptCheck = await checkPromptOwnership(promptId, req.user!.userId)
       if (!promptCheck.hasPermission) {
         return NextResponse.json({ error: promptCheck.error }, { status: promptCheck.error === 'Prompt not found' ? 404 : 403 })
       }
@@ -73,7 +72,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         }
 
         // Linking to a team - check team membership and permissions
-        const teamCheck = await checkTeamMembership(validatedTeamId, authReq.user!.userId)
+        const teamCheck = await checkTeamMembership(validatedTeamId, req.user!.userId)
         if (!teamCheck.hasPermission) {
           return NextResponse.json({ error: teamCheck.error }, { status: 403 })
         }
@@ -143,9 +142,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         })
       }
 
-    } catch (error) {
-      console.error('Link prompt to team error:', error)
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-    }
-  })(req)
-}
+  } catch (error) {
+    console.error('Link prompt to team error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+})

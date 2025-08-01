@@ -85,7 +85,7 @@ export default function ProfilePage() {
 
     try {
       const token = localStorage.getItem('accessToken')
-      const updateData: any = { displayName }
+      const updateData: { displayName: string; currentPassword?: string; newPassword?: string } = { displayName }
       
       if (showPasswordForm) {
         updateData.currentPassword = currentPassword

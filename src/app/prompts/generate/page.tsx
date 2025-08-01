@@ -152,7 +152,7 @@ export default function GeneratePromptPage() {
                     Description *
                   </label>
                   <p className="mt-1 text-xs text-gray-500">
-                    Describe what you want your AI prompt to accomplish (e.g., "Java code review", "Creative writing assistant")
+                    Describe what you want your AI prompt to accomplish (e.g., &quot;Java code review&quot;, &quot;Creative writing assistant&quot;)
                   </p>
                   <textarea
                     id="description"

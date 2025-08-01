@@ -75,7 +75,7 @@ export default function NewTeamPage() {
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900">Create New Team</h1>
             <p className="mt-1 text-sm text-gray-600">
-              Create a team to collaborate on prompts with others. You'll be the team admin.
+              Create a team to collaborate on prompts with others. You&apos;ll be the team admin.
             </p>
           </div>
 
@@ -145,7 +145,7 @@ export default function NewTeamPage() {
                       Team Admin Privileges
                     </h3>
                     <div className="mt-2 text-sm text-blue-700">
-                      <p>As the team creator, you'll have admin privileges to:</p>
+                      <p>As the team creator, you&apos;ll have admin privileges to:</p>
                       <ul className="list-disc list-inside mt-1 space-y-1">
                         <li>Add or remove team members</li>
                         <li>Assign roles (Admin, Editor, Viewer)</li>

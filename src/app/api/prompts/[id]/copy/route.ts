@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { withAuth, AuthenticatedRequest } from '@/lib/middleware'
 
@@ -35,8 +35,7 @@ async function checkPromptPermission(promptId: number, userId: number) {
   return { hasPermission: false, prompt: null, error: 'Permission denied' }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  return withAuth(async (authReq: AuthenticatedRequest) => {
+export const POST = withAuth(async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
     try {
       const promptId = parseInt(params.id)
 
@@ -44,7 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         return NextResponse.json({ error: 'Invalid prompt ID' }, { status: 400 })
       }
 
-      const { hasPermission, error } = await checkPromptPermission(promptId, authReq.user!.userId)
+      const { hasPermission, error } = await checkPromptPermission(promptId, req.user!.userId)
 
       if (!hasPermission) {
         return NextResponse.json({ error }, { status: error === 'Prompt not found' ? 404 : 403 })
@@ -61,9 +60,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         success: true 
       })
 
-    } catch (error) {
-      console.error('Copy prompt error:', error)
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-    }
-  })(req)
-}
+  } catch (error) {
+    console.error('Copy prompt error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+})

@@ -30,7 +30,7 @@ export default function PromptVersionsPage() {
   const [selectedVersions, setSelectedVersions] = useState<number[]>([])
   const [showDiff, setShowDiff] = useState(false)
   const [error, setError] = useState('')
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<{ id: number; email: string } | null>(null)
   const router = useRouter()
   const params = useParams()
   const promptId = params.id as string
@@ -300,7 +300,7 @@ export default function PromptVersionsPage() {
               </svg>
               <h3 className="mt-2 text-sm font-medium text-gray-900">No versions found</h3>
               <p className="mt-1 text-sm text-gray-500">
-                This prompt doesn't have any version history yet.
+                This prompt doesn&apos;t have any version history yet.
               </p>
             </div>
           )}

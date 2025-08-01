@@ -69,7 +69,7 @@ export default function SignupPage() {
               Your account has been created successfully. You can start using the app right away!
             </p>
             <p className="mt-1 text-center text-xs text-gray-500">
-              We've sent a verification email to secure your account - you can verify it later.
+              We&apos;ve sent a verification email to secure your account - you can verify it later.
             </p>
             <p className="mt-4 text-center text-xs text-gray-500">
               Redirecting you to login...
