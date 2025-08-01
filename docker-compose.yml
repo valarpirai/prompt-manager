@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: prompt_manager_db
+    environment:
+      POSTGRES_DB: prompt_manager
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgbouncer:
+    image: pgbouncer/pgbouncer:latest
+    container_name: prompt_manager_pgbouncer
+    environment:
+      DATABASES_HOST: postgres
+      DATABASES_PORT: 5432
+      DATABASES_USER: postgres
+      DATABASES_PASSWORD: password
+      DATABASES_DBNAME: prompt_manager
+      POOL_MODE: transaction
+      SERVER_RESET_QUERY: DISCARD ALL
+      MAX_CLIENT_CONN: 25
+      DEFAULT_POOL_SIZE: 5
+      MIN_POOL_SIZE: 0
+      RESERVE_POOL_SIZE: 0
+      RESERVE_POOL_TIMEOUT: 5
+      MAX_DB_CONNECTIONS: 0
+      MAX_USER_CONNECTIONS: 0
+      SERVER_ROUND_ROBIN: 1
+      IGNORE_STARTUP_PARAMETERS: extra_float_digits
+      SERVER_IDLE_TIMEOUT: 600
+      SERVER_CONNECT_TIMEOUT: 15
+      SERVER_LOGIN_RETRY: 15
+      QUERY_TIMEOUT: 0
+      QUERY_WAIT_TIMEOUT: 120
+      CLIENT_IDLE_TIMEOUT: 0
+      CLIENT_LOGIN_TIMEOUT: 60
+      AUTODB_IDLE_TIMEOUT: 3600
+      DNS_MAX_TTL: 15
+      DNS_NXDOMAIN_TTL: 15
+      DNS_ZONE_CHECK_PERIOD: 0
+      RESOLV_CONF: /etc/resolv.conf
+    ports:
+      - "6432:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    container_name: prompt_manager_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+volumes:
+  postgres_data:
+  redis_data:

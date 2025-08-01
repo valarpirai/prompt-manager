@@ -1,0 +1,140 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  password      String?   // Null for Google OAuth users
+  display_name  String?
+  avatar        String?
+  bio           String?
+  is_verified   Boolean   @default(false)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  
+  // Relations
+  prompts         Prompt[]       @relation("PromptOwner")
+  created_prompts Prompt[]       @relation("PromptCreator")
+  team_members    TeamMember[]
+  prompt_versions PromptVersion[]
+  
+  @@map("users")
+}
+
+model Prompt {
+  id            Int       @id @default(autoincrement())
+  title         String    @db.VarChar(100)
+  prompt_text   String
+  usage_count   Int       @default(0)
+  version       Int       @default(1)
+  deleted_at    DateTime?
+  visibility    Visibility @default(PRIVATE)
+  owner_id      Int
+  team_id       Int?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  created_by    Int
+  
+  // Relations
+  owner         User      @relation("PromptOwner", fields: [owner_id], references: [id])
+  creator       User      @relation("PromptCreator", fields: [created_by], references: [id])
+  team          Team?     @relation(fields: [team_id], references: [id])
+  tags          Tag[]     @relation("PromptTags")
+  versions      PromptVersion[]
+  
+  @@map("prompts")
+  @@index([title])
+  @@index([prompt_text])
+  @@index([visibility])
+  @@index([usage_count])
+  @@index([created_at])
+}
+
+model PromptVersion {
+  id            Int       @id @default(autoincrement())
+  prompt_id     Int
+  title         String    @db.VarChar(100)
+  prompt_text   String
+  version       Int
+  created_at    DateTime  @default(now())
+  created_by    Int
+  
+  // Relations
+  prompt        Prompt    @relation(fields: [prompt_id], references: [id], onDelete: Cascade)
+  creator       User      @relation(fields: [created_by], references: [id])
+  tags          Tag[]     @relation("PromptVersionTags")
+  
+  @@map("prompt_versions")
+  @@unique([prompt_id, version])
+}
+
+model Tag {
+  id            Int       @id @default(autoincrement())
+  name          String    @unique
+  created_at    DateTime  @default(now())
+  
+  // Relations
+  prompts       Prompt[]  @relation("PromptTags")
+  prompt_versions PromptVersion[] @relation("PromptVersionTags")
+  
+  @@map("tags")
+}
+
+model Team {
+  id            Int       @id @default(autoincrement())
+  name          String
+  description   String?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  
+  // Relations
+  prompts       Prompt[]
+  members       TeamMember[]
+  
+  @@map("teams")
+}
+
+model TeamMember {
+  id            Int       @id @default(autoincrement())
+  user_id       Int
+  team_id       Int
+  role          TeamRole  @default(VIEWER)
+  created_at    DateTime  @default(now())
+  
+  // Relations
+  user          User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  team          Team      @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  
+  @@map("team_members")
+  @@unique([user_id, team_id])
+}
+
+model EmailVerification {
+  id            Int       @id @default(autoincrement())
+  user_id       Int       @unique
+  token         String    @unique
+  expires_at    DateTime
+  created_at    DateTime  @default(now())
+  
+  @@map("email_verifications")
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum TeamRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
