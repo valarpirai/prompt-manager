@@ -18,7 +18,7 @@ class PromptDetector {
     document.addEventListener('keydown', this.handleKeyDown.bind(this), true);
     document.addEventListener('input', this.handleInput.bind(this), true);
     document.addEventListener('click', this.handleClick.bind(this), true);
-    
+
     // Clean up when extension is disabled
     this.checkExtensionStatus();
   }
@@ -35,18 +35,25 @@ class PromptDetector {
   }
 
   removeListeners() {
-    document.removeEventListener('keydown', this.handleKeyDown.bind(this), true);
+    document.removeEventListener(
+      'keydown',
+      this.handleKeyDown.bind(this),
+      true
+    );
     document.removeEventListener('input', this.handleInput.bind(this), true);
     document.removeEventListener('click', this.handleClick.bind(this), true);
   }
 
   handleClick(event) {
     // Hide autocomplete if clicking outside of input or dropdown
-    if (this.autocompleteDropdown && this.autocompleteDropdown.style.display !== 'none') {
+    if (
+      this.autocompleteDropdown &&
+      this.autocompleteDropdown.style.display !== 'none'
+    ) {
       const target = event.target;
       const clickedOnInput = this.isValidTextElement(target);
       const clickedOnDropdown = this.autocompleteDropdown.contains(target);
-      
+
       if (!clickedOnInput && !clickedOnDropdown) {
         this.hideAutocomplete();
       }
@@ -55,10 +62,10 @@ class PromptDetector {
 
   isValidTextElement(element) {
     if (!element) return false;
-    
+
     const tagName = element.tagName?.toLowerCase();
     const type = element.type?.toLowerCase();
-    
+
     // Check for text inputs and textareas
     if (tagName === 'textarea') return true;
     if (tagName === 'input') {
@@ -66,19 +73,19 @@ class PromptDetector {
       const validTypes = ['text', 'search', 'url', 'email', 'tel'];
       return !type || validTypes.includes(type);
     }
-    
+
     // Check for contenteditable elements
     if (element.contentEditable === 'true') return true;
-    
+
     return false;
   }
 
   handleInput(event) {
     const element = event.target;
     if (!this.isValidTextElement(element)) return;
-    
+
     this.activeElement = element;
-    
+
     // Check for autocomplete trigger
     const autocompleteMatch = this.detectAutocomplete(element);
     if (autocompleteMatch) {
@@ -91,12 +98,15 @@ class PromptDetector {
 
   async handleKeyDown(event) {
     if (this.isProcessing) return;
-    
+
     const element = event.target;
     if (!this.isValidTextElement(element)) return;
 
     // Handle autocomplete navigation
-    if (this.autocompleteDropdown && this.autocompleteDropdown.style.display !== 'none') {
+    if (
+      this.autocompleteDropdown &&
+      this.autocompleteDropdown.style.display !== 'none'
+    ) {
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         this.selectNextAutocomplete();
@@ -120,11 +130,14 @@ class PromptDetector {
 
     const isTab = event.key === 'Tab';
     const isShiftEnter = event.key === 'Enter' && event.shiftKey;
-    
+
     if (!isTab && !isShiftEnter) return;
 
     // Don't process if autocomplete is showing
-    if (this.autocompleteDropdown && this.autocompleteDropdown.style.display !== 'none') {
+    if (
+      this.autocompleteDropdown &&
+      this.autocompleteDropdown.style.display !== 'none'
+    ) {
       return;
     }
 
@@ -136,7 +149,7 @@ class PromptDetector {
     event.stopPropagation();
 
     this.isProcessing = true;
-    
+
     try {
       await this.processPromptReplacement(element, promptMatch);
     } catch (error) {
@@ -149,17 +162,17 @@ class PromptDetector {
 
   extractPromptName(element) {
     let value, selectionStart, selectionEnd;
-    
+
     if (element.contentEditable === 'true') {
       // Handle contenteditable elements
       const selection = window.getSelection();
       if (selection.rangeCount === 0) return null;
-      
+
       const range = selection.getRangeAt(0);
       const textNode = range.startContainer;
-      
+
       if (textNode.nodeType !== Node.TEXT_NODE) return null;
-      
+
       value = textNode.textContent;
       selectionStart = range.startOffset;
       selectionEnd = range.endOffset;
@@ -175,19 +188,19 @@ class PromptDetector {
     // Look for ::promptname pattern before cursor
     const beforeCursor = value.substring(0, selectionStart);
     const match = beforeCursor.match(/::(.*)$/);
-    
+
     if (!match) return null;
 
     const fullMatch = match[0]; // ::promptname
     const promptName = match[1].trim(); // promptname
     const startPos = selectionStart - fullMatch.length;
-    
+
     return {
       promptName,
       startPos,
       endPos: selectionStart,
       fullMatch,
-      element
+      element,
     };
   }
 
@@ -195,24 +208,36 @@ class PromptDetector {
     try {
       const response = await this.sendMessage({
         type: 'GET_PROMPT',
-        title: promptMatch.promptName
+        title: promptMatch.promptName,
       });
 
       if (response.success) {
         this.replaceText(element, promptMatch, response.promptText);
-        this.showTooltip(element, `Inserted prompt: ${promptMatch.promptName}`, 'success');
+        this.showTooltip(
+          element,
+          `Inserted prompt: ${promptMatch.promptName}`,
+          'success'
+        );
       } else {
         if (response.needsAuth) {
           this.showTooltip(element, 'Please log in', 'error');
           // Optionally open login page
           this.sendMessage({ type: 'OPEN_LOGIN' });
         } else {
-          this.showTooltip(element, response.error || 'Prompt not found', 'error');
+          this.showTooltip(
+            element,
+            response.error || 'Prompt not found',
+            'error'
+          );
         }
       }
     } catch (error) {
       console.error('Failed to get prompt:', error);
-      this.showTooltip(element, 'Failed to fetch prompt. Try again later.', 'error');
+      this.showTooltip(
+        element,
+        'Failed to fetch prompt. Try again later.',
+        'error'
+      );
     }
   }
 
@@ -226,26 +251,30 @@ class PromptDetector {
 
   replaceTextInInput(element, promptMatch, newText) {
     const value = element.value;
-    
+
     console.log('Replacing text in input:');
     console.log('Original value:', value);
     console.log('Match start pos:', promptMatch.startPos);
     console.log('Match end pos:', promptMatch.endPos);
-    console.log('Text to replace:', value.substring(promptMatch.startPos, promptMatch.endPos));
+    console.log(
+      'Text to replace:',
+      value.substring(promptMatch.startPos, promptMatch.endPos)
+    );
     console.log('New text:', newText);
-    
-    const newValue = value.substring(0, promptMatch.startPos) + 
-                    newText + 
-                    value.substring(promptMatch.endPos);
-    
+
+    const newValue =
+      value.substring(0, promptMatch.startPos) +
+      newText +
+      value.substring(promptMatch.endPos);
+
     console.log('New value:', newValue);
-    
+
     element.value = newValue;
-    
+
     // Set cursor position after the inserted text
     const newCursorPos = promptMatch.startPos + newText.length;
     element.setSelectionRange(newCursorPos, newCursorPos);
-    
+
     // Trigger input event for any listeners
     element.dispatchEvent(new Event('input', { bubbles: true }));
     element.dispatchEvent(new Event('change', { bubbles: true }));
@@ -254,37 +283,41 @@ class PromptDetector {
   replaceTextInContentEditable(element, promptMatch, newText) {
     const selection = window.getSelection();
     if (selection.rangeCount === 0) return;
-    
+
     const range = selection.getRangeAt(0);
     const textNode = range.startContainer;
-    
+
     if (textNode.nodeType !== Node.TEXT_NODE) return;
-    
+
     // Create new text content
     const oldText = textNode.textContent;
-    
+
     console.log('Replacing text in contentEditable:');
     console.log('Original text:', oldText);
     console.log('Match start pos:', promptMatch.startPos);
     console.log('Match end pos:', promptMatch.endPos);
-    console.log('Text to replace:', oldText.substring(promptMatch.startPos, promptMatch.endPos));
+    console.log(
+      'Text to replace:',
+      oldText.substring(promptMatch.startPos, promptMatch.endPos)
+    );
     console.log('New text:', newText);
-    
-    const newTextContent = oldText.substring(0, promptMatch.startPos) + 
-                          newText + 
-                          oldText.substring(promptMatch.endPos);
-    
+
+    const newTextContent =
+      oldText.substring(0, promptMatch.startPos) +
+      newText +
+      oldText.substring(promptMatch.endPos);
+
     console.log('New text content:', newTextContent);
-    
+
     textNode.textContent = newTextContent;
-    
+
     // Set cursor position after inserted text
     const newCursorPos = promptMatch.startPos + newText.length;
     range.setStart(textNode, newCursorPos);
     range.setEnd(textNode, newCursorPos);
     selection.removeAllRanges();
     selection.addRange(range);
-    
+
     // Trigger input event
     element.dispatchEvent(new Event('input', { bubbles: true }));
   }
@@ -292,11 +325,11 @@ class PromptDetector {
   showTooltip(element, message, type = 'info') {
     // Clear existing tooltip
     this.clearTooltip();
-    
+
     const tooltip = document.createElement('div');
     tooltip.id = 'prompt-manager-tooltip';
     tooltip.textContent = message;
-    
+
     // Style the tooltip
     Object.assign(tooltip.style, {
       position: 'fixed',
@@ -310,9 +343,9 @@ class PromptDetector {
       maxWidth: '300px',
       wordWrap: 'break-word',
       boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-      transition: 'opacity 0.2s ease-in-out'
+      transition: 'opacity 0.2s ease-in-out',
     });
-    
+
     // Set color based on type
     if (type === 'success') {
       tooltip.style.backgroundColor = '#10b981';
@@ -321,15 +354,15 @@ class PromptDetector {
     } else {
       tooltip.style.backgroundColor = '#374151';
     }
-    
+
     // Position tooltip near the element
     const rect = element.getBoundingClientRect();
     tooltip.style.left = `${rect.left}px`;
     tooltip.style.top = `${rect.bottom + 8}px`;
-    
+
     // Add to document
     document.body.appendChild(tooltip);
-    
+
     // Auto-hide after 3 seconds
     this.tooltipTimeout = setTimeout(() => {
       this.clearTooltip();
@@ -341,7 +374,7 @@ class PromptDetector {
       clearTimeout(this.tooltipTimeout);
       this.tooltipTimeout = null;
     }
-    
+
     const existingTooltip = document.getElementById('prompt-manager-tooltip');
     if (existingTooltip) {
       existingTooltip.remove();
@@ -350,16 +383,16 @@ class PromptDetector {
 
   detectAutocomplete(element) {
     let value, selectionStart;
-    
+
     if (element.contentEditable === 'true') {
       const selection = window.getSelection();
       if (selection.rangeCount === 0) return null;
-      
+
       const range = selection.getRangeAt(0);
       const textNode = range.startContainer;
-      
+
       if (textNode.nodeType !== Node.TEXT_NODE) return null;
-      
+
       value = textNode.textContent;
       selectionStart = range.startOffset;
     } else {
@@ -372,33 +405,39 @@ class PromptDetector {
     // Look for :: pattern before cursor - simple greedy match
     const beforeCursor = value.substring(0, selectionStart);
     const match = beforeCursor.match(/::(.*)$/);
-    
+
     if (!match) return null;
 
     const fullMatch = match[0]; // This includes the :: prefix
-    const query = match[1];     // This is just the query part
+    const query = match[1]; // This is just the query part
     const startPos = selectionStart - fullMatch.length;
-    
-    console.log('detectAutocomplete:', { beforeCursor, fullMatch, query, startPos, selectionStart });
-    
+
+    console.log('detectAutocomplete:', {
+      beforeCursor,
+      fullMatch,
+      query,
+      startPos,
+      selectionStart,
+    });
+
     return {
       query,
       promptName: query.trim(), // Add this for compatibility with replaceText
       fullMatch,
       startPos,
       endPos: selectionStart,
-      element
+      element,
     };
   }
 
   async showAutocomplete(element, autocompleteMatch) {
     const query = autocompleteMatch.query;
-    
+
     // Debounce the API call
     if (this.autocompleteTimeout) {
       clearTimeout(this.autocompleteTimeout);
     }
-    
+
     this.autocompleteTimeout = setTimeout(async () => {
       try {
         // Only fetch if query changed
@@ -407,7 +446,7 @@ class PromptDetector {
           const response = await this.sendMessage({
             type: 'GET_PROMPT_TITLES',
             query: query,
-            limit: 10
+            limit: 10,
           });
 
           if (response.success) {
@@ -443,7 +482,7 @@ class PromptDetector {
       const item = document.createElement('div');
       item.className = 'prompt-autocomplete-item';
       item.dataset.index = index;
-      
+
       item.innerHTML = `
         <div class="prompt-title">${this.escapeHtml(prompt.title)}</div>
         <div class="prompt-meta">
@@ -452,16 +491,16 @@ class PromptDetector {
           <span class="prompt-owner">by ${this.escapeHtml(prompt.owner)}</span>
         </div>
       `;
-      
+
       item.addEventListener('click', () => {
         this.selectAutocompleteItem(index);
       });
-      
+
       item.addEventListener('mouseenter', () => {
         this.selectedIndex = index;
         this.updateAutocompleteSelection();
       });
-      
+
       this.autocompleteDropdown.appendChild(item);
     });
 
@@ -473,7 +512,7 @@ class PromptDetector {
   createAutocompleteDropdown() {
     this.autocompleteDropdown = document.createElement('div');
     this.autocompleteDropdown.id = 'prompt-autocomplete-dropdown';
-    
+
     // Styles
     Object.assign(this.autocompleteDropdown.style, {
       position: 'fixed',
@@ -483,11 +522,12 @@ class PromptDetector {
       backgroundColor: 'white',
       border: '1px solid #d1d5db',
       borderRadius: '6px',
-      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+      boxShadow:
+        '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       fontSize: '14px',
       minWidth: '300px',
-      display: 'none'
+      display: 'none',
     });
 
     // Add CSS for items
@@ -538,7 +578,7 @@ class PromptDetector {
         color: #7c3aed;
       }
     `;
-    
+
     if (!document.getElementById('prompt-autocomplete-styles')) {
       style.id = 'prompt-autocomplete-styles';
       document.head.appendChild(style);
@@ -550,26 +590,26 @@ class PromptDetector {
   positionAutocomplete(element) {
     const rect = element.getBoundingClientRect();
     const dropdown = this.autocompleteDropdown;
-    
+
     // Position below the element
     let top = rect.bottom + window.scrollY + 2;
     let left = rect.left + window.scrollX;
-    
+
     // Ensure dropdown stays within viewport
     const dropdownRect = dropdown.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    
+
     // Adjust horizontal position if needed
     if (left + dropdownRect.width > viewportWidth) {
       left = viewportWidth - dropdownRect.width - 10;
     }
-    
+
     // Adjust vertical position if needed
     if (top + dropdownRect.height > viewportHeight) {
       top = rect.top + window.scrollY - dropdownRect.height - 2;
     }
-    
+
     dropdown.style.left = `${Math.max(10, left)}px`;
     dropdown.style.top = `${Math.max(10, top)}px`;
   }
@@ -588,26 +628,30 @@ class PromptDetector {
 
   selectNextAutocomplete() {
     if (this.autocompletePrompts.length === 0) return;
-    
-    this.selectedIndex = (this.selectedIndex + 1) % this.autocompletePrompts.length;
+
+    this.selectedIndex =
+      (this.selectedIndex + 1) % this.autocompletePrompts.length;
     this.updateAutocompleteSelection();
   }
 
   selectPrevAutocomplete() {
     if (this.autocompletePrompts.length === 0) return;
-    
-    this.selectedIndex = this.selectedIndex <= 0 
-      ? this.autocompletePrompts.length - 1 
-      : this.selectedIndex - 1;
+
+    this.selectedIndex =
+      this.selectedIndex <= 0
+        ? this.autocompletePrompts.length - 1
+        : this.selectedIndex - 1;
     this.updateAutocompleteSelection();
   }
 
   updateAutocompleteSelection() {
-    const items = this.autocompleteDropdown.querySelectorAll('.prompt-autocomplete-item');
+    const items = this.autocompleteDropdown.querySelectorAll(
+      '.prompt-autocomplete-item'
+    );
     items.forEach((item, index) => {
       item.classList.toggle('selected', index === this.selectedIndex);
     });
-    
+
     // Scroll selected item into view
     if (this.selectedIndex >= 0) {
       const selectedItem = items[this.selectedIndex];
@@ -619,39 +663,41 @@ class PromptDetector {
 
   async selectAutocompleteItem(index) {
     if (index < 0 || index >= this.autocompletePrompts.length) return;
-    
+
     const prompt = this.autocompletePrompts[index];
     const element = this.activeElement;
-    
+
     console.log('=== AUTOCOMPLETE SELECTION ===');
     console.log('Selected prompt:', prompt);
     console.log('Active element:', element);
     console.log('Element type:', element.tagName, element.type);
-    
+
     if (!element) {
       console.log('No active element!');
       return;
     }
-    
+
     // Check current state before hiding autocomplete
-    const currentValue = element.contentEditable === 'true' 
-      ? element.textContent || element.innerText 
-      : element.value;
-    const currentCursor = element.contentEditable === 'true'
-      ? window.getSelection().getRangeAt(0).startOffset
-      : element.selectionStart;
-    
+    const currentValue =
+      element.contentEditable === 'true'
+        ? element.textContent || element.innerText
+        : element.value;
+    const currentCursor =
+      element.contentEditable === 'true'
+        ? window.getSelection().getRangeAt(0).startOffset
+        : element.selectionStart;
+
     console.log('Current text:', currentValue);
     console.log('Current cursor position:', currentCursor);
-    
+
     this.hideAutocomplete();
-    
+
     // Replace the :: query with the full prompt text
     try {
       console.log('Fetching prompt content for:', prompt.title);
       const response = await this.sendMessage({
         type: 'GET_PROMPT',
-        title: prompt.title
+        title: prompt.title,
       });
 
       console.log('Prompt fetch response:', response);
@@ -660,7 +706,11 @@ class PromptDetector {
         console.log('Prompt text to insert:', response.promptText);
         // Try to replace text using a more direct approach
         if (this.replaceAutocompleteTextDirect(element, response.promptText)) {
-          this.showTooltip(element, `Inserted prompt: ${prompt.title}`, 'success');
+          this.showTooltip(
+            element,
+            `Inserted prompt: ${prompt.title}`,
+            'success'
+          );
           console.log('=== REPLACEMENT SUCCESSFUL ===');
         } else {
           this.showTooltip(element, 'Could not find text to replace', 'error');
@@ -668,7 +718,11 @@ class PromptDetector {
         }
       } else {
         console.log('Failed to fetch prompt:', response.error);
-        this.showTooltip(element, response.error || 'Failed to fetch prompt', 'error');
+        this.showTooltip(
+          element,
+          response.error || 'Failed to fetch prompt',
+          'error'
+        );
       }
     } catch (error) {
       console.error('Failed to insert prompt:', error);
@@ -680,24 +734,24 @@ class PromptDetector {
     console.log('=== REPLACE AUTOCOMPLETE TEXT DIRECT ===');
     console.log('Element:', element);
     console.log('New text:', newText);
-    
+
     let value, selectionStart;
-    
+
     if (element.contentEditable === 'true') {
       const selection = window.getSelection();
       if (selection.rangeCount === 0) {
         console.log('No selection range found');
         return false;
       }
-      
+
       const range = selection.getRangeAt(0);
       const textNode = range.startContainer;
-      
+
       if (textNode.nodeType !== Node.TEXT_NODE) {
         console.log('Not a text node:', textNode.nodeType);
         return false;
       }
-      
+
       value = textNode.textContent;
       selectionStart = range.startOffset;
     } else {
@@ -716,10 +770,10 @@ class PromptDetector {
     // Find the :: pattern before cursor
     const beforeCursor = value.substring(0, selectionStart);
     console.log('Before cursor:', JSON.stringify(beforeCursor));
-    
+
     const match = beforeCursor.match(/::(.*)$/);
     console.log('Regex match result:', match);
-    
+
     if (!match) {
       console.log('No :: pattern found');
       return false;
@@ -728,68 +782,73 @@ class PromptDetector {
     const fullMatch = match[0];
     const query = match[1];
     const matchStartPos = selectionStart - fullMatch.length;
-    
+
     console.log('=== MATCH DETAILS ===');
     console.log('Full match:', JSON.stringify(fullMatch));
     console.log('Query part:', JSON.stringify(query));
     console.log('Match start pos:', matchStartPos);
     console.log('Match end pos:', selectionStart);
-    console.log('Text to replace:', JSON.stringify(value.substring(matchStartPos, selectionStart)));
+    console.log(
+      'Text to replace:',
+      JSON.stringify(value.substring(matchStartPos, selectionStart))
+    );
     console.log('Replacing with:', JSON.stringify(newText));
-    
+
     if (element.contentEditable === 'true') {
       console.log('=== CONTENTEDITABLE REPLACEMENT ===');
       // Handle contenteditable
       const selection = window.getSelection();
       const range = selection.getRangeAt(0);
       const textNode = range.startContainer;
-      
+
       const oldText = textNode.textContent;
       console.log('Old text node content:', JSON.stringify(oldText));
-      
-      const newTextContent = oldText.substring(0, matchStartPos) + 
-                            newText + 
-                            oldText.substring(selectionStart);
-      
+
+      const newTextContent =
+        oldText.substring(0, matchStartPos) +
+        newText +
+        oldText.substring(selectionStart);
+
       console.log('New text content:', JSON.stringify(newTextContent));
-      
+
       textNode.textContent = newTextContent;
-      
+
       // Set cursor position after inserted text
       const newCursorPos = matchStartPos + newText.length;
       console.log('Setting cursor to position:', newCursorPos);
-      
+
       range.setStart(textNode, newCursorPos);
       range.setEnd(textNode, newCursorPos);
       selection.removeAllRanges();
       selection.addRange(range);
-      
+
       element.dispatchEvent(new Event('input', { bubbles: true }));
       console.log('=== CONTENTEDITABLE REPLACEMENT COMPLETE ===');
     } else {
       console.log('=== INPUT/TEXTAREA REPLACEMENT ===');
       // Handle regular input/textarea
       console.log('Original value:', JSON.stringify(value));
-      
-      const newValue = value.substring(0, matchStartPos) + 
-                      newText + 
-                      value.substring(selectionStart);
-      
+
+      const newValue =
+        value.substring(0, matchStartPos) +
+        newText +
+        value.substring(selectionStart);
+
       console.log('New value:', JSON.stringify(newValue));
-      
+
       element.value = newValue;
-      
+
       // Set cursor position after the inserted text
       const newCursorPos = matchStartPos + newText.length;
       console.log('Setting cursor to position:', newCursorPos);
-      
+
       element.setSelectionRange(newCursorPos, newCursorPos);
-      
+
       element.dispatchEvent(new Event('input', { bubbles: true }));
       element.dispatchEvent(new Event('change', { bubbles: true }));
       console.log('=== INPUT/TEXTAREA REPLACEMENT COMPLETE ===');
     }
-    
+
     console.log('=== REPLACEMENT SUCCESSFUL ===');
     return true;
   }
@@ -831,24 +890,27 @@ function initExtensionLoginListener() {
     // Listen for custom events from the extension login page
     window.addEventListener('extensionLoginSuccess', (event) => {
       const { accessToken, refreshToken, user } = event.detail;
-      
+
       // Send tokens to background script
-      chrome.runtime.sendMessage({
-        type: 'SAVE_AUTH_TOKENS',
-        accessToken,
-        refreshToken,
-        user
-      }, (response) => {
-        if (response && response.success) {
-          console.log('Extension login successful');
-          // Close the tab after a brief delay
-          setTimeout(() => {
-            window.close();
-          }, 2000);
-        } else {
-          console.error('Failed to save tokens to extension:', response);
+      chrome.runtime.sendMessage(
+        {
+          type: 'SAVE_AUTH_TOKENS',
+          accessToken,
+          refreshToken,
+          user,
+        },
+        (response) => {
+          if (response && response.success) {
+            console.log('Extension login successful');
+            // Close the tab after a brief delay
+            setTimeout(() => {
+              window.close();
+            }, 2000);
+          } else {
+            console.error('Failed to save tokens to extension:', response);
+          }
         }
-      });
+      );
     });
 
     // Also check localStorage periodically for fallback tokens
@@ -856,29 +918,32 @@ function initExtensionLoginListener() {
       const token = localStorage.getItem('extensionAuthToken');
       const refreshToken = localStorage.getItem('extensionRefreshToken');
       const user = localStorage.getItem('extensionUser');
-      
+
       if (token && refreshToken && user) {
         // Clear the localStorage items
         localStorage.removeItem('extensionAuthToken');
         localStorage.removeItem('extensionRefreshToken');
         localStorage.removeItem('extensionUser');
-        
+
         // Send to extension
-        chrome.runtime.sendMessage({
-          type: 'SAVE_AUTH_TOKENS',
-          accessToken: token,
-          refreshToken: refreshToken,
-          user: JSON.parse(user)
-        }, (response) => {
-          if (response && response.success) {
-            console.log('Extension login successful via localStorage');
-          } else {
-            console.error('Failed to save tokens to extension:', response);
+        chrome.runtime.sendMessage(
+          {
+            type: 'SAVE_AUTH_TOKENS',
+            accessToken: token,
+            refreshToken: refreshToken,
+            user: JSON.parse(user),
+          },
+          (response) => {
+            if (response && response.success) {
+              console.log('Extension login successful via localStorage');
+            } else {
+              console.error('Failed to save tokens to extension:', response);
+            }
           }
-        });
+        );
       }
     };
-    
+
     // Check for tokens every second for 10 seconds
     let attempts = 0;
     const tokenCheckInterval = setInterval(() => {
@@ -899,8 +964,15 @@ const observer = new MutationObserver((mutations) => {
       // Check if any text input elements were added
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
-          const textElements = node.querySelectorAll('input[type="text"], input[type="search"], input[type="url"], input[type="email"], textarea, [contenteditable="true"]');
-          if (textElements.length > 0 || node.matches('input[type="text"], input[type="search"], input[type="url"], input[type="email"], textarea, [contenteditable="true"]')) {
+          const textElements = node.querySelectorAll(
+            'input[type="text"], input[type="search"], input[type="url"], input[type="email"], textarea, [contenteditable="true"]'
+          );
+          if (
+            textElements.length > 0 ||
+            node.matches(
+              'input[type="text"], input[type="search"], input[type="url"], input[type="email"], textarea, [contenteditable="true"]'
+            )
+          ) {
             // New text elements added, detector should handle them automatically
           }
         }
@@ -911,5 +983,5 @@ const observer = new MutationObserver((mutations) => {
 
 observer.observe(document.body, {
   childList: true,
-  subtree: true
+  subtree: true,
 });

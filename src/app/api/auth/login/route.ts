@@ -1,25 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { comparePassword, generateTokens } from '@/lib/auth'
-import { validateEmail } from '@/lib/validation'
-import { generalRateLimit } from '@/lib/middleware'
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { comparePassword, generateTokens } from '@/lib/auth';
+import { validateEmail } from '@/lib/validation';
+import { generalRateLimit } from '@/lib/middleware';
 
 export async function POST(req: NextRequest) {
   try {
-    const clientIp = req.ip || 'unknown'
-    
+    const clientIp = req.ip || 'unknown';
+
     if (!generalRateLimit(clientIp)) {
-      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
 
-    const { email, password } = await req.json()
+    const { email, password } = await req.json();
 
     if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Email and password are required' },
+        { status: 400 }
+      );
     }
 
     if (!validateEmail(email)) {
-      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Invalid email format' },
+        { status: 400 }
+      );
     }
 
     const user = await prisma.user.findUnique({
@@ -30,24 +36,30 @@ export async function POST(req: NextRequest) {
         password: true,
         display_name: true,
         is_verified: true,
-      }
-    })
+      },
+    });
 
     if (!user || !user.password) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+      return NextResponse.json(
+        { error: 'Invalid credentials' },
+        { status: 401 }
+      );
     }
 
-    const isPasswordValid = await comparePassword(password, user.password)
-    
+    const isPasswordValid = await comparePassword(password, user.password);
+
     if (!isPasswordValid) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+      return NextResponse.json(
+        { error: 'Invalid credentials' },
+        { status: 401 }
+      );
     }
 
     const { accessToken, refreshToken } = generateTokens({
       userId: user.id,
       email: user.email,
       isVerified: user.is_verified,
-    })
+    });
 
     return NextResponse.json({
       message: 'Login successful',
@@ -59,10 +71,12 @@ export async function POST(req: NextRequest) {
       },
       accessToken,
       refreshToken,
-    })
-
+    });
   } catch (error) {
-    console.error('Login error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Login error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

@@ -23,12 +23,12 @@ class PopupManager {
   async updateStatus() {
     try {
       const response = await this.sendMessage({ type: 'GET_SETTINGS' });
-      
+
       if (response.success) {
         const settings = response.settings;
         const statusDiv = document.getElementById('status');
         const loginBtn = document.getElementById('login-btn');
-        
+
         if (!settings.isLoggedIn) {
           statusDiv.textContent = 'Please log in to use the extension';
           statusDiv.className = 'status not-logged-in';

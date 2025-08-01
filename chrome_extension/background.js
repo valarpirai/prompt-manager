@@ -6,7 +6,7 @@ class PromptManagerAPI {
       token: 'pm_jwt_token',
       refreshToken: 'pm_refresh_token',
       baseURL: 'pm_base_url',
-      isEnabled: 'pm_is_enabled'
+      isEnabled: 'pm_is_enabled',
     };
     this.init();
   }
@@ -15,9 +15,9 @@ class PromptManagerAPI {
     // Load settings from storage
     const settings = await chrome.storage.local.get([
       this.storageKeys.baseURL,
-      this.storageKeys.isEnabled
+      this.storageKeys.isEnabled,
     ]);
-    
+
     this.baseURL = settings[this.storageKeys.baseURL] || this.baseURL;
     this.isEnabled = settings[this.storageKeys.isEnabled] !== false; // default to true
   }
@@ -38,13 +38,13 @@ class PromptManagerAPI {
   async clearTokens() {
     await chrome.storage.local.remove([
       this.storageKeys.token,
-      this.storageKeys.refreshToken
+      this.storageKeys.refreshToken,
     ]);
   }
 
   async makeRequest(endpoint, options = {}) {
     const token = await this.getToken();
-    
+
     if (!token && !options.skipAuth) {
       throw new Error('Not authenticated');
     }
@@ -52,7 +52,7 @@ class PromptManagerAPI {
     const url = `${this.baseURL}${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',
-      ...options.headers
+      ...options.headers,
     };
 
     if (token && !options.skipAuth) {
@@ -61,7 +61,7 @@ class PromptManagerAPI {
 
     const response = await fetch(url, {
       ...options,
-      headers
+      headers,
     });
 
     // Handle token expiration
@@ -87,18 +87,23 @@ class PromptManagerAPI {
 
   async tryRefreshToken() {
     try {
-      const result = await chrome.storage.local.get([this.storageKeys.refreshToken]);
+      const result = await chrome.storage.local.get([
+        this.storageKeys.refreshToken,
+      ]);
       const refreshToken = result[this.storageKeys.refreshToken];
-      
+
       if (!refreshToken) return false;
 
-      const response = await fetch(`${this.baseURL}/api/auth/extension-refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ refreshToken })
-      });
+      const response = await fetch(
+        `${this.baseURL}/api/auth/extension-refresh`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ refreshToken }),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -108,7 +113,7 @@ class PromptManagerAPI {
     } catch (error) {
       console.error('Token refresh failed:', error);
     }
-    
+
     return false;
   }
 
@@ -117,15 +122,17 @@ class PromptManagerAPI {
       const response = await this.makeRequest(
         `/api/prompts?title=${encodeURIComponent(title)}&exact=true`
       );
-      
+
       console.log('getPromptByTitle response:', response);
-      
+
       if (response && response.prompts && response.prompts.length > 0) {
         // Return the most recent accessible prompt
         const prompts = response.prompts;
-        return prompts.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
+        return prompts.sort(
+          (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
+        )[0];
       }
-      
+
       return null;
     } catch (error) {
       console.error('Error in getPromptByTitle:', error);
@@ -138,7 +145,7 @@ class PromptManagerAPI {
       const params = new URLSearchParams();
       if (query) params.append('q', query);
       params.append('limit', limit.toString());
-      
+
       const data = await this.makeRequest(`/api/prompts/titles?${params}`);
       return data.prompts || [];
     } catch (error) {
@@ -150,7 +157,7 @@ class PromptManagerAPI {
   async incrementUsage(promptId) {
     try {
       await this.makeRequest(`/api/prompts/${promptId}/usage`, {
-        method: 'POST'
+        method: 'POST',
       });
     } catch (error) {
       console.error('Failed to increment usage:', error);
@@ -165,7 +172,7 @@ class PromptManagerAPI {
 
   async updateSettings(settings) {
     await chrome.storage.local.set(settings);
-    
+
     // Update instance properties
     if (settings[this.storageKeys.baseURL]) {
       this.baseURL = settings[this.storageKeys.baseURL];
@@ -179,13 +186,13 @@ class PromptManagerAPI {
     const settings = await chrome.storage.local.get([
       this.storageKeys.baseURL,
       this.storageKeys.isEnabled,
-      this.storageKeys.token
+      this.storageKeys.token,
     ]);
-    
+
     return {
       baseURL: settings[this.storageKeys.baseURL] || this.baseURL,
       isEnabled: settings[this.storageKeys.isEnabled] !== false,
-      isLoggedIn: !!settings[this.storageKeys.token]
+      isLoggedIn: !!settings[this.storageKeys.token],
     };
   }
 }
@@ -222,54 +229,54 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleGetPrompt(request, sendResponse) {
   try {
     const settings = await api.getSettings();
-    
+
     if (!settings.isEnabled) {
-      sendResponse({ 
-        success: false, 
-        error: 'Extension is disabled' 
+      sendResponse({
+        success: false,
+        error: 'Extension is disabled',
       });
       return;
     }
 
     if (!settings.isLoggedIn) {
-      sendResponse({ 
-        success: false, 
+      sendResponse({
+        success: false,
         error: 'Not authenticated',
-        needsAuth: true 
+        needsAuth: true,
       });
       return;
     }
 
     const prompt = await api.getPromptByTitle(request.title);
-    
+
     if (prompt) {
       // Increment usage count
       api.incrementUsage(prompt.id);
-      
-      sendResponse({ 
-        success: true, 
+
+      sendResponse({
+        success: true,
         promptText: prompt.prompt_text || prompt.content,
-        promptId: prompt.id
+        promptId: prompt.id,
       });
     } else {
-      sendResponse({ 
-        success: false, 
-        error: `Prompt '${request.title}' not found` 
+      sendResponse({
+        success: false,
+        error: `Prompt '${request.title}' not found`,
       });
     }
   } catch (error) {
     console.error('Error fetching prompt:', error);
-    
+
     if (error.message === 'Authentication expired') {
-      sendResponse({ 
-        success: false, 
+      sendResponse({
+        success: false,
         error: 'Please log in again',
-        needsAuth: true 
+        needsAuth: true,
       });
     } else {
-      sendResponse({ 
-        success: false, 
-        error: 'Failed to fetch prompt. Try again later.' 
+      sendResponse({
+        success: false,
+        error: 'Failed to fetch prompt. Try again later.',
       });
     }
   }
@@ -328,34 +335,34 @@ async function handleSaveAuthTokens(request, sendResponse) {
 async function handleGetPromptTitles(request, sendResponse) {
   try {
     const settings = await api.getSettings();
-    
+
     if (!settings.isEnabled) {
-      sendResponse({ 
-        success: false, 
-        error: 'Extension is disabled' 
+      sendResponse({
+        success: false,
+        error: 'Extension is disabled',
       });
       return;
     }
 
     if (!settings.isLoggedIn) {
-      sendResponse({ 
-        success: false, 
+      sendResponse({
+        success: false,
         error: 'Not authenticated',
-        needsAuth: true 
+        needsAuth: true,
       });
       return;
     }
 
     const prompts = await api.getPromptTitles(request.query, request.limit);
-    sendResponse({ 
-      success: true, 
-      prompts 
+    sendResponse({
+      success: true,
+      prompts,
     });
   } catch (error) {
     console.error('Error fetching prompt titles:', error);
-    sendResponse({ 
-      success: false, 
-      error: 'Failed to fetch prompt titles' 
+    sendResponse({
+      success: false,
+      error: 'Failed to fetch prompt titles',
     });
   }
 }
@@ -367,7 +374,7 @@ chrome.runtime.onInstalled.addListener((details) => {
     // Set default settings
     chrome.storage.local.set({
       [api.storageKeys.baseURL]: api.baseURL,
-      [api.storageKeys.isEnabled]: true
+      [api.storageKeys.isEnabled]: true,
     });
   }
 });

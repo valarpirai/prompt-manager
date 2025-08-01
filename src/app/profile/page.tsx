@@ -1,144 +1,166 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Navigation from '@/components/Navigation'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Navigation from '@/components/Navigation';
 
 interface User {
-  id: number
-  email: string
-  display_name: string | null
-  is_verified: boolean
-  created_at: string
-  updated_at: string
+  id: number;
+  email: string;
+  display_name: string | null;
+  is_verified: boolean;
+  created_at: string;
+  updated_at: string;
   _count: {
-    owned_prompts: number
-    team_memberships: number
-  }
+    owned_prompts: number;
+    team_memberships: number;
+  };
 }
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [showPasswordForm, setShowPasswordForm] = useState(false)
-  const [displayName, setDisplayName] = useState('')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const router = useRouter()
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [displayName, setDisplayName] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken')
+    const token = localStorage.getItem('accessToken');
     if (!token) {
-      router.push('/login')
-      return
+      router.push('/login');
+      return;
     }
-    fetchProfile()
-  }, [router])
+    fetchProfile();
+  }, [router]);
 
   const fetchProfile = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const token = localStorage.getItem('accessToken')
+      const token = localStorage.getItem('accessToken');
       const response = await fetch('/api/user/profile', {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (response.ok) {
-        const data = await response.json()
-        setUser(data.user)
-        setDisplayName(data.user.display_name || '')
+        const data = await response.json();
+        setUser(data.user);
+        setDisplayName(data.user.display_name || '');
       } else if (response.status === 401) {
-        router.push('/login')
+        router.push('/login');
       } else {
-        setMessage({ type: 'error', text: 'Failed to load profile' })
+        setMessage({ type: 'error', text: 'Failed to load profile' });
       }
     } catch (error) {
-      console.error('Error fetching profile:', error)
-      setMessage({ type: 'error', text: 'An error occurred while loading your profile' })
+      console.error('Error fetching profile:', error);
+      setMessage({
+        type: 'error',
+        text: 'An error occurred while loading your profile',
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     if (showPasswordForm) {
       if (newPassword !== confirmPassword) {
-        setMessage({ type: 'error', text: 'New passwords do not match' })
-        return
+        setMessage({ type: 'error', text: 'New passwords do not match' });
+        return;
       }
-      
+
       if (!currentPassword || !newPassword) {
-        setMessage({ type: 'error', text: 'Please fill in all password fields' })
-        return
+        setMessage({
+          type: 'error',
+          text: 'Please fill in all password fields',
+        });
+        return;
       }
     }
 
-    setSaving(true)
-    setMessage(null)
+    setSaving(true);
+    setMessage(null);
 
     try {
-      const token = localStorage.getItem('accessToken')
-      const updateData: { displayName: string; currentPassword?: string; newPassword?: string } = { displayName }
-      
+      const token = localStorage.getItem('accessToken');
+      const updateData: {
+        displayName: string;
+        currentPassword?: string;
+        newPassword?: string;
+      } = { displayName };
+
       if (showPasswordForm) {
-        updateData.currentPassword = currentPassword
-        updateData.newPassword = newPassword
+        updateData.currentPassword = currentPassword;
+        updateData.newPassword = newPassword;
       }
 
       const response = await fetch('/api/user/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(updateData)
-      })
+        body: JSON.stringify(updateData),
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (response.ok) {
-        setUser(prev => prev ? { ...prev, ...data.user } : null)
-        setMessage({ type: 'success', text: data.message })
-        
+        setUser((prev) => (prev ? { ...prev, ...data.user } : null));
+        setMessage({ type: 'success', text: data.message });
+
         // Clear password fields
         if (showPasswordForm) {
-          setCurrentPassword('')
-          setNewPassword('')
-          setConfirmPassword('')
-          setShowPasswordForm(false)
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
+          setShowPasswordForm(false);
         }
-        
+
         // Update localStorage user data
-        const storedUser = localStorage.getItem('user')
+        const storedUser = localStorage.getItem('user');
         if (storedUser) {
-          const userData = JSON.parse(storedUser)
-          localStorage.setItem('user', JSON.stringify({ ...userData, ...data.user }))
+          const userData = JSON.parse(storedUser);
+          localStorage.setItem(
+            'user',
+            JSON.stringify({ ...userData, ...data.user })
+          );
         }
       } else {
-        setMessage({ type: 'error', text: data.error || 'Failed to update profile' })
+        setMessage({
+          type: 'error',
+          text: data.error || 'Failed to update profile',
+        });
       }
     } catch (error) {
-      console.error('Error updating profile:', error)
-      setMessage({ type: 'error', text: 'An error occurred while updating your profile' })
+      console.error('Error updating profile:', error);
+      setMessage({
+        type: 'error',
+        text: 'An error occurred while updating your profile',
+      });
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
-    })
-  }
+      day: 'numeric',
+    });
+  };
 
   if (loading) {
     return (
@@ -153,20 +175,22 @@ export default function ProfilePage() {
           </div>
         </main>
       </div>
-    )
+    );
   }
 
-  if (!user) return null
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      
+
       <main className="max-w-2xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Profile Settings
+            </h1>
             <p className="mt-1 text-sm text-gray-600">
               Manage your account information and preferences.
             </p>
@@ -174,11 +198,13 @@ export default function ProfilePage() {
 
           {/* Message */}
           {message && (
-            <div className={`mb-6 p-4 rounded-md ${
-              message.type === 'success' 
-                ? 'bg-green-50 border border-green-200 text-green-700' 
-                : 'bg-red-50 border border-red-200 text-red-700'
-            }`}>
+            <div
+              className={`mb-6 p-4 rounded-md ${
+                message.type === 'success'
+                  ? 'bg-green-50 border border-green-200 text-green-700'
+                  : 'bg-red-50 border border-red-200 text-red-700'
+              }`}
+            >
               <p className="text-sm">{message.text}</p>
             </div>
           )}
@@ -186,12 +212,16 @@ export default function ProfilePage() {
           {/* Profile Information */}
           <div className="bg-white shadow rounded-lg mb-6">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">Account Information</h2>
+              <h2 className="text-lg font-medium text-gray-900">
+                Account Information
+              </h2>
             </div>
             <div className="px-6 py-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email
+                  </label>
                   <div className="mt-1 flex items-center">
                     <span className="text-sm text-gray-900">{user.email}</span>
                     {user.is_verified ? (
@@ -206,19 +236,31 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Member Since</label>
-                  <p className="mt-1 text-sm text-gray-900">{formatDate(user.created_at)}</p>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Member Since
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {formatDate(user.created_at)}
+                  </p>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Prompts Created</label>
-                  <p className="mt-1 text-sm text-gray-900">{user._count.owned_prompts}</p>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Prompts Created
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {user._count.owned_prompts}
+                  </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Team Memberships</label>
-                  <p className="mt-1 text-sm text-gray-900">{user._count.team_memberships}</p>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Team Memberships
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {user._count.team_memberships}
+                  </p>
                 </div>
               </div>
             </div>
@@ -227,11 +269,19 @@ export default function ProfilePage() {
           {/* Profile Form */}
           <div className="bg-white shadow rounded-lg">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">Edit Profile</h2>
+              <h2 className="text-lg font-medium text-gray-900">
+                Edit Profile
+              </h2>
             </div>
-            <form onSubmit={handleUpdateProfile} className="px-6 py-4 space-y-6">
+            <form
+              onSubmit={handleUpdateProfile}
+              className="px-6 py-4 space-y-6"
+            >
               <div>
-                <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="displayName"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Display Name
                 </label>
                 <input
@@ -252,7 +302,9 @@ export default function ProfilePage() {
               {/* Password Section */}
               <div className="border-t border-gray-200 pt-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-md font-medium text-gray-900">Password</h3>
+                  <h3 className="text-md font-medium text-gray-900">
+                    Password
+                  </h3>
                   <button
                     type="button"
                     onClick={() => setShowPasswordForm(!showPasswordForm)}
@@ -261,11 +313,14 @@ export default function ProfilePage() {
                     {showPasswordForm ? 'Cancel' : 'Change Password'}
                   </button>
                 </div>
-                
+
                 {showPasswordForm && (
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700">
+                      <label
+                        htmlFor="currentPassword"
+                        className="block text-sm font-medium text-gray-700"
+                      >
                         Current Password
                       </label>
                       <input
@@ -279,7 +334,10 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+                      <label
+                        htmlFor="newPassword"
+                        className="block text-sm font-medium text-gray-700"
+                      >
                         New Password
                       </label>
                       <input
@@ -293,7 +351,10 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                      <label
+                        htmlFor="confirmPassword"
+                        className="block text-sm font-medium text-gray-700"
+                      >
                         Confirm New Password
                       </label>
                       <input
@@ -317,9 +378,24 @@ export default function ProfilePage() {
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving && (
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                   )}
                   {saving ? 'Saving...' : 'Save Changes'}
@@ -330,5 +406,5 @@ export default function ProfilePage() {
         </div>
       </main>
     </div>
-  )
+  );
 }

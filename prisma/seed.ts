@@ -1,27 +1,27 @@
-import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcryptjs'
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting database seeding...')
+  console.log('🌱 Starting database seeding...');
 
   // Create default admin user
-  const adminEmail = 'admin@example.com'
-  const adminPassword = 'test1234'
+  const adminEmail = 'admin@example.com';
+  const adminPassword = 'test1234';
 
   // Check if admin user already exists
   const existingAdmin = await prisma.user.findUnique({
-    where: { email: adminEmail }
-  })
+    where: { email: adminEmail },
+  });
 
   if (existingAdmin) {
-    console.log('🔍 Admin user already exists, skipping creation...')
-    return
+    console.log('🔍 Admin user already exists, skipping creation...');
+    return;
   }
 
   // Hash the password
-  const hashedPassword = await bcrypt.hash(adminPassword, 12)
+  const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
   // Create admin user
   const adminUser = await prisma.user.create({
@@ -30,13 +30,13 @@ async function main() {
       password: hashedPassword,
       display_name: 'Administrator',
       is_verified: true,
-    }
-  })
+    },
+  });
 
-  console.log('✅ Admin user created successfully:')
-  console.log(`   Email: ${adminUser.email}`)
-  console.log(`   Password: ${adminPassword}`)
-  console.log(`   ID: ${adminUser.id}`)
+  console.log('✅ Admin user created successfully:');
+  console.log(`   Email: ${adminUser.email}`);
+  console.log(`   Password: ${adminPassword}`);
+  console.log(`   ID: ${adminUser.id}`);
 
   // Create some sample prompts for the admin user
   const samplePrompts = [
@@ -55,7 +55,7 @@ Please be constructive and specific in your feedback.
 Code to review:
 [INSERT CODE HERE]`,
       tags: ['code-review', 'programming', 'development'],
-      visibility: 'PUBLIC' as const
+      visibility: 'PUBLIC' as const,
     },
     {
       title: 'Technical Writing Assistant',
@@ -71,7 +71,7 @@ Please help with:
 Topic: [INSERT TOPIC HERE]
 Target audience: [INSERT AUDIENCE HERE]`,
       tags: ['technical-writing', 'documentation', 'communication'],
-      visibility: 'PUBLIC' as const
+      visibility: 'PUBLIC' as const,
     },
     {
       title: 'SQL Query Optimizer',
@@ -92,7 +92,7 @@ Original query:
 Database system: [INSERT DB TYPE HERE]
 Table sizes: [INSERT TABLE INFO HERE]`,
       tags: ['sql', 'database', 'optimization', 'performance'],
-      visibility: 'PUBLIC' as const
+      visibility: 'PUBLIC' as const,
     },
     {
       title: 'Meeting Summary Generator',
@@ -110,26 +110,28 @@ Make the summary clear, actionable, and easy to share with stakeholders.
 Meeting notes:
 [INSERT MEETING NOTES HERE]`,
       tags: ['meeting', 'summary', 'productivity', 'business'],
-      visibility: 'PRIVATE' as const
-    }
-  ]
+      visibility: 'PRIVATE' as const,
+    },
+  ];
 
   // Create sample tags first
-  const allTags = [...new Set(samplePrompts.flatMap(prompt => prompt.tags))]
+  const allTags = [...new Set(samplePrompts.flatMap((prompt) => prompt.tags))];
   const createdTags = await Promise.all(
-    allTags.map(tagName =>
+    allTags.map((tagName) =>
       prisma.tag.upsert({
         where: { name: tagName },
         update: {},
-        create: { name: tagName }
+        create: { name: tagName },
       })
     )
-  )
+  );
 
   // Create sample prompts
   for (const promptData of samplePrompts) {
-    const promptTags = createdTags.filter(tag => promptData.tags.includes(tag.name))
-    
+    const promptTags = createdTags.filter((tag) =>
+      promptData.tags.includes(tag.name)
+    );
+
     const prompt = await prisma.prompt.create({
       data: {
         title: promptData.title,
@@ -138,10 +140,10 @@ Meeting notes:
         owner_id: adminUser.id,
         created_by: adminUser.id,
         tags: {
-          connect: promptTags.map(tag => ({ id: tag.id }))
-        }
-      }
-    })
+          connect: promptTags.map((tag) => ({ id: tag.id })),
+        },
+      },
+    });
 
     // Create version history
     await prisma.promptVersion.create({
@@ -152,26 +154,26 @@ Meeting notes:
         version: 1,
         created_by: adminUser.id,
         tags: {
-          connect: promptTags.map(tag => ({ id: tag.id }))
-        }
-      }
-    })
+          connect: promptTags.map((tag) => ({ id: tag.id })),
+        },
+      },
+    });
 
-    console.log(`📝 Created sample prompt: ${prompt.title}`)
+    console.log(`📝 Created sample prompt: ${prompt.title}`);
   }
 
-  console.log('🎉 Database seeding completed successfully!')
-  console.log('')
-  console.log('🔑 Default login credentials:')
-  console.log(`   Email: ${adminEmail}`)
-  console.log(`   Password: ${adminPassword}`)
+  console.log('🎉 Database seeding completed successfully!');
+  console.log('');
+  console.log('🔑 Default login credentials:');
+  console.log(`   Email: ${adminEmail}`);
+  console.log(`   Password: ${adminPassword}`);
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error during seeding:', e)
-    process.exit(1)
+    console.error('❌ Error during seeding:', e);
+    process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect()
-  })
+    await prisma.$disconnect();
+  });

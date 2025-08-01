@@ -1,202 +1,213 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
-import Navigation from '@/components/Navigation'
-import Link from 'next/link'
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import Navigation from '@/components/Navigation';
+import Link from 'next/link';
 
 interface TeamMember {
-  id: number
-  role: 'ADMIN' | 'VIEWER'
-  created_at: string
+  id: number;
+  role: 'ADMIN' | 'VIEWER';
+  created_at: string;
   user: {
-    id: number
-    email: string
-    display_name: string | null
-  }
+    id: number;
+    email: string;
+    display_name: string | null;
+  };
 }
 
 interface TeamPrompt {
-  id: number
-  title: string
-  usage_count: number
-  visibility: 'PUBLIC' | 'PRIVATE'
-  created_at: string
-  updated_at: string
+  id: number;
+  title: string;
+  usage_count: number;
+  visibility: 'PUBLIC' | 'PRIVATE';
+  created_at: string;
+  updated_at: string;
   tags: {
-    id: number
-    name: string
-  }[]
+    id: number;
+    name: string;
+  }[];
 }
 
 interface Team {
-  id: number
-  name: string
-  description: string | null
-  created_at: string
-  updated_at: string
-  userRole: 'ADMIN' | 'VIEWER'
-  members: TeamMember[]
-  prompts: TeamPrompt[]
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  userRole: 'ADMIN' | 'VIEWER';
+  members: TeamMember[];
+  prompts: TeamPrompt[];
   _count: {
-    prompts: number
-    members: number
-  }
+    prompts: number;
+    members: number;
+  };
 }
 
 export default function TeamDetailPage() {
-  const [team, setTeam] = useState<Team | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'prompts'>('overview')
-  const [showAddMember, setShowAddMember] = useState(false)
-  const [newMemberEmail, setNewMemberEmail] = useState('')
-  const [newMemberRole, setNewMemberRole] = useState<'ADMIN' | 'VIEWER'>('VIEWER')
-  const [addingMember, setAddingMember] = useState(false)
-  const [error, setError] = useState('')
-  const router = useRouter()
-  const params = useParams()
-  const teamId = params.id as string
+  const [team, setTeam] = useState<Team | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'members' | 'prompts'
+  >('overview');
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberRole, setNewMemberRole] = useState<'ADMIN' | 'VIEWER'>(
+    'VIEWER'
+  );
+  const [addingMember, setAddingMember] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
+  const params = useParams();
+  const teamId = params.id as string;
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken')
+    const token = localStorage.getItem('accessToken');
     if (!token) {
-      router.push('/login')
-      return
+      router.push('/login');
+      return;
     }
-    fetchTeam()
-  }, [teamId, router])
+    fetchTeam();
+  }, [teamId, router]);
 
   const fetchTeam = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const token = localStorage.getItem('accessToken')
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`/api/teams/${teamId}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (response.ok) {
-        const data = await response.json()
-        setTeam(data.team)
+        const data = await response.json();
+        setTeam(data.team);
       } else if (response.status === 404) {
-        setError('Team not found')
+        setError('Team not found');
       } else if (response.status === 403) {
-        setError('You do not have permission to view this team')
+        setError('You do not have permission to view this team');
       } else {
-        setError('Failed to load team')
+        setError('Failed to load team');
       }
     } catch (error) {
-      console.error('Error fetching team:', error)
-      setError('An error occurred while loading the team')
+      console.error('Error fetching team:', error);
+      setError('An error occurred while loading the team');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleAddMember = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newMemberEmail.trim()) return
+    e.preventDefault();
+    if (!newMemberEmail.trim()) return;
 
-    setAddingMember(true)
+    setAddingMember(true);
     try {
-      const token = localStorage.getItem('accessToken')
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`/api/teams/${teamId}/members`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           email: newMemberEmail.trim(),
-          role: newMemberRole
-        })
-      })
+          role: newMemberRole,
+        }),
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (response.ok) {
-        await fetchTeam() // Refresh team data
-        setShowAddMember(false)
-        setNewMemberEmail('')
-        setNewMemberRole('VIEWER')
+        await fetchTeam(); // Refresh team data
+        setShowAddMember(false);
+        setNewMemberEmail('');
+        setNewMemberRole('VIEWER');
       } else {
-        alert(data.error || 'Failed to add member')
+        alert(data.error || 'Failed to add member');
       }
     } catch (error) {
-      console.error('Error adding member:', error)
-      alert('An error occurred while adding the member')
+      console.error('Error adding member:', error);
+      alert('An error occurred while adding the member');
     } finally {
-      setAddingMember(false)
+      setAddingMember(false);
     }
-  }
+  };
 
   const handleRemoveMember = async (userId: number) => {
-    if (!confirm('Are you sure you want to remove this member from the team?')) return
+    if (!confirm('Are you sure you want to remove this member from the team?'))
+      return;
 
     try {
-      const token = localStorage.getItem('accessToken')
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`/api/teams/${teamId}/members/${userId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (response.ok) {
-        await fetchTeam() // Refresh team data
+        await fetchTeam(); // Refresh team data
       } else {
-        const data = await response.json()
-        alert(data.error || 'Failed to remove member')
+        const data = await response.json();
+        alert(data.error || 'Failed to remove member');
       }
     } catch (error) {
-      console.error('Error removing member:', error)
-      alert('An error occurred while removing the member')
+      console.error('Error removing member:', error);
+      alert('An error occurred while removing the member');
     }
-  }
+  };
 
-  const handleChangeRole = async (userId: number, newRole: 'ADMIN' | 'VIEWER') => {
+  const handleChangeRole = async (
+    userId: number,
+    newRole: 'ADMIN' | 'VIEWER'
+  ) => {
     try {
-      const token = localStorage.getItem('accessToken')
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`/api/teams/${teamId}/members/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ role: newRole })
-      })
+        body: JSON.stringify({ role: newRole }),
+      });
 
       if (response.ok) {
-        await fetchTeam() // Refresh team data
+        await fetchTeam(); // Refresh team data
       } else {
-        const data = await response.json()
-        alert(data.error || 'Failed to update member role')
+        const data = await response.json();
+        alert(data.error || 'Failed to update member role');
       }
     } catch (error) {
-      console.error('Error updating member role:', error)
-      alert('An error occurred while updating the member role')
+      console.error('Error updating member role:', error);
+      alert('An error occurred while updating the member role');
     }
-  }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
-    })
-  }
+      day: 'numeric',
+    });
+  };
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'ADMIN': return 'bg-red-100 text-red-800'
-      case 'VIEWER': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'ADMIN':
+        return 'bg-red-100 text-red-800';
+      case 'VIEWER':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
-  }
+  };
 
-  const canManageMembers = () => team?.userRole === 'ADMIN'
-  const canEditTeam = () => team?.userRole === 'ADMIN'
+  const canManageMembers = () => team?.userRole === 'ADMIN';
+  const canEditTeam = () => team?.userRole === 'ADMIN';
 
   if (loading) {
     return (
@@ -211,7 +222,7 @@ export default function TeamDetailPage() {
           </div>
         </main>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -221,8 +232,18 @@ export default function TeamDetailPage() {
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
             <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.667-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+              <svg
+                className="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.667-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"
+                />
               </svg>
               <h3 className="mt-2 text-sm font-medium text-gray-900">Error</h3>
               <p className="mt-1 text-sm text-gray-500">{error}</p>
@@ -238,15 +259,15 @@ export default function TeamDetailPage() {
           </div>
         </main>
       </div>
-    )
+    );
   }
 
-  if (!team) return null
+  if (!team) return null;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      
+
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {/* Header */}
@@ -258,12 +279,16 @@ export default function TeamDetailPage() {
                     <h1 className="text-2xl font-bold text-gray-900 truncate">
                       {team.name}
                     </h1>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(team.userRole)}`}>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(team.userRole)}`}
+                    >
                       {team.userRole}
                     </span>
                   </div>
                   {team.description && (
-                    <p className="mt-1 text-sm text-gray-600">{team.description}</p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      {team.description}
+                    </p>
                   )}
                   <div className="mt-2 flex items-center space-x-6 text-sm text-gray-500">
                     <span>{team._count.members} members</span>
@@ -277,8 +302,18 @@ export default function TeamDetailPage() {
                       href={`/teams/${team.id}/edit`}
                       className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                     >
-                      <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <svg
+                        className="h-4 w-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
                       </svg>
                       Edit Team
                     </Link>
@@ -287,8 +322,18 @@ export default function TeamDetailPage() {
                     href="/teams"
                     className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                   >
-                    <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    <svg
+                      className="h-4 w-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                      />
                     </svg>
                     Back to Teams
                   </Link>
@@ -342,13 +387,27 @@ export default function TeamDetailPage() {
                     <div className="bg-gray-50 rounded-lg p-4">
                       <div className="flex items-center">
                         <div className="flex-shrink-0">
-                          <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          <svg
+                            className="h-6 w-6 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                            />
                           </svg>
                         </div>
                         <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-900">Total Members</p>
-                          <p className="text-2xl font-bold text-gray-900">{team._count.members}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Total Members
+                          </p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {team._count.members}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -356,13 +415,27 @@ export default function TeamDetailPage() {
                     <div className="bg-gray-50 rounded-lg p-4">
                       <div className="flex items-center">
                         <div className="flex-shrink-0">
-                          <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          <svg
+                            className="h-6 w-6 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
                           </svg>
                         </div>
                         <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-900">Team Prompts</p>
-                          <p className="text-2xl font-bold text-gray-900">{team._count.prompts}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Team Prompts
+                          </p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {team._count.prompts}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -370,13 +443,27 @@ export default function TeamDetailPage() {
                     <div className="bg-gray-50 rounded-lg p-4">
                       <div className="flex items-center">
                         <div className="flex-shrink-0">
-                          <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <svg
+                            className="h-6 w-6 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
                           </svg>
                         </div>
                         <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-900">Created</p>
-                          <p className="text-2xl font-bold text-gray-900">{formatDate(team.created_at)}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Created
+                          </p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {formatDate(team.created_at)}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -384,11 +471,16 @@ export default function TeamDetailPage() {
 
                   {/* Recent Activity */}
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Prompts</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">
+                      Recent Prompts
+                    </h3>
                     {team.prompts.length > 0 ? (
                       <div className="space-y-3">
                         {team.prompts.slice(0, 5).map((prompt) => (
-                          <div key={prompt.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div
+                            key={prompt.id}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                          >
                             <div className="flex-1 min-w-0">
                               <Link
                                 href={`/prompts/${prompt.id}`}
@@ -397,9 +489,13 @@ export default function TeamDetailPage() {
                                 {prompt.title}
                               </Link>
                               <div className="flex items-center space-x-2 mt-1">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                  prompt.visibility === 'PUBLIC' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                                }`}>
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    prompt.visibility === 'PUBLIC'
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                  }`}
+                                >
                                   {prompt.visibility}
                                 </span>
                                 <span className="text-xs text-gray-500">
@@ -414,7 +510,9 @@ export default function TeamDetailPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-gray-500 text-center py-8">No prompts in this team yet.</p>
+                      <p className="text-gray-500 text-center py-8">
+                        No prompts in this team yet.
+                      </p>
                     )}
                   </div>
                 </div>
@@ -424,14 +522,26 @@ export default function TeamDetailPage() {
               {activeTab === 'members' && (
                 <div className="space-y-6">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium text-gray-900">Team Members</h3>
+                    <h3 className="text-lg font-medium text-gray-900">
+                      Team Members
+                    </h3>
                     {canManageMembers() && (
                       <button
                         onClick={() => setShowAddMember(true)}
                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
                       >
-                        <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        <svg
+                          className="h-4 w-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                          />
                         </svg>
                         Add Member
                       </button>
@@ -443,7 +553,10 @@ export default function TeamDetailPage() {
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                       <form onSubmit={handleAddMember} className="space-y-4">
                         <div>
-                          <label htmlFor="memberEmail" className="block text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="memberEmail"
+                            className="block text-sm font-medium text-gray-700"
+                          >
                             Email Address
                           </label>
                           <input
@@ -457,17 +570,28 @@ export default function TeamDetailPage() {
                           />
                         </div>
                         <div>
-                          <label htmlFor="memberRole" className="block text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="memberRole"
+                            className="block text-sm font-medium text-gray-700"
+                          >
                             Role
                           </label>
                           <select
                             id="memberRole"
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             value={newMemberRole}
-                            onChange={(e) => setNewMemberRole(e.target.value as 'ADMIN' | 'VIEWER')}
+                            onChange={(e) =>
+                              setNewMemberRole(
+                                e.target.value as 'ADMIN' | 'VIEWER'
+                              )
+                            }
                           >
-                            <option value="VIEWER">Viewer - Can view team prompts</option>
-                            <option value="ADMIN">Admin - Full team management</option>
+                            <option value="VIEWER">
+                              Viewer - Can view team prompts
+                            </option>
+                            <option value="ADMIN">
+                              Admin - Full team management
+                            </option>
                           </select>
                         </div>
                         <div className="flex justify-end space-x-3">
@@ -493,34 +617,49 @@ export default function TeamDetailPage() {
                   {/* Members List */}
                   <div className="space-y-3">
                     {team.members.map((member) => (
-                      <div key={member.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div
+                        key={member.id}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                      >
                         <div className="flex items-center space-x-3">
                           <div className="flex-shrink-0">
                             <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
                               <span className="font-medium text-gray-700">
-                                {(member.user.display_name || member.user.email).charAt(0).toUpperCase()}
+                                {(member.user.display_name || member.user.email)
+                                  .charAt(0)
+                                  .toUpperCase()}
                               </span>
                             </div>
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-900">
-                              {member.user.display_name || member.user.email.split('@')[0]}
+                              {member.user.display_name ||
+                                member.user.email.split('@')[0]}
                             </p>
-                            <p className="text-sm text-gray-500">{member.user.email}</p>
+                            <p className="text-sm text-gray-500">
+                              {member.user.email}
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
                           {canManageMembers() ? (
                             <select
                               value={member.role}
-                              onChange={(e) => handleChangeRole(member.user.id, e.target.value as 'ADMIN' | 'VIEWER')}
+                              onChange={(e) =>
+                                handleChangeRole(
+                                  member.user.id,
+                                  e.target.value as 'ADMIN' | 'VIEWER'
+                                )
+                              }
                               className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                             >
                               <option value="ADMIN">Admin</option>
                               <option value="VIEWER">Viewer</option>
                             </select>
                           ) : (
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(member.role)}`}>
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(member.role)}`}
+                            >
                               {member.role}
                             </span>
                           )}
@@ -543,13 +682,25 @@ export default function TeamDetailPage() {
               {activeTab === 'prompts' && (
                 <div className="space-y-6">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium text-gray-900">Team Prompts</h3>
+                    <h3 className="text-lg font-medium text-gray-900">
+                      Team Prompts
+                    </h3>
                     <Link
                       href="/prompts/new"
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
                     >
-                      <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      <svg
+                        className="h-4 w-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
                       </svg>
                       Create Prompt
                     </Link>
@@ -558,7 +709,10 @@ export default function TeamDetailPage() {
                   {team.prompts.length > 0 ? (
                     <div className="space-y-4">
                       {team.prompts.map((prompt) => (
-                        <div key={prompt.id} className="border border-gray-200 rounded-lg p-4">
+                        <div
+                          key={prompt.id}
+                          className="border border-gray-200 rounded-lg p-4"
+                        >
                           <div className="flex items-center justify-between">
                             <div className="flex-1 min-w-0">
                               <Link
@@ -568,13 +722,19 @@ export default function TeamDetailPage() {
                                 {prompt.title}
                               </Link>
                               <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                  prompt.visibility === 'PUBLIC' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                                }`}>
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    prompt.visibility === 'PUBLIC'
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                  }`}
+                                >
                                   {prompt.visibility}
                                 </span>
                                 <span>Used {prompt.usage_count} times</span>
-                                <span>Updated {formatDate(prompt.updated_at)}</span>
+                                <span>
+                                  Updated {formatDate(prompt.updated_at)}
+                                </span>
                               </div>
                               {prompt.tags.length > 0 && (
                                 <div className="mt-2 flex flex-wrap gap-1">
@@ -603,10 +763,22 @@ export default function TeamDetailPage() {
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      <svg
+                        className="mx-auto h-12 w-12 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
                       </svg>
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">No prompts yet</h3>
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">
+                        No prompts yet
+                      </h3>
                       <p className="mt-1 text-sm text-gray-500">
                         Get started by creating a prompt for this team.
                       </p>
@@ -627,5 +799,5 @@ export default function TeamDetailPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }

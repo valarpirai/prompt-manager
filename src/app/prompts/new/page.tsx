@@ -1,155 +1,157 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Navigation from '@/components/Navigation'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Navigation from '@/components/Navigation';
 
 interface Team {
-  id: number
-  name: string
-  userRole: 'ADMIN' | 'VIEWER'
+  id: number;
+  name: string;
+  userRole: 'ADMIN' | 'VIEWER';
 }
 
 export default function NewPromptPage() {
-  const [loading, setLoading] = useState(false)
-  const [teams, setTeams] = useState<Team[]>([])
+  const [loading, setLoading] = useState(false);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     promptText: '',
     tags: [] as string[],
     visibility: 'PRIVATE' as 'PUBLIC' | 'PRIVATE' | 'TEAM',
-    teamId: ''
-  })
-  const [tagInput, setTagInput] = useState('')
-  const [error, setError] = useState('')
-  const router = useRouter()
+    teamId: '',
+  });
+  const [tagInput, setTagInput] = useState('');
+  const [error, setError] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken')
+    const token = localStorage.getItem('accessToken');
     if (!token) {
-      router.push('/login')
-      return
+      router.push('/login');
+      return;
     }
-    fetchTeams()
-  }, [router])
+    fetchTeams();
+  }, [router]);
 
   const fetchTeams = async () => {
     try {
-      const token = localStorage.getItem('accessToken')
+      const token = localStorage.getItem('accessToken');
       const response = await fetch('/api/teams', {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (response.ok) {
-        const data = await response.json()
+        const data = await response.json();
         // Only show teams where user can edit (admin only)
-        const editableTeams = data.teams.filter((team: Team) => 
-          team.userRole === 'ADMIN'
-        )
-        setTeams(editableTeams)
+        const editableTeams = data.teams.filter(
+          (team: Team) => team.userRole === 'ADMIN'
+        );
+        setTeams(editableTeams);
       }
     } catch (error) {
-      console.error('Error fetching teams:', error)
+      console.error('Error fetching teams:', error);
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+    e.preventDefault();
+    setError('');
 
     if (!formData.title.trim()) {
-      setError('Title is required')
-      return
+      setError('Title is required');
+      return;
     }
 
     if (!formData.promptText.trim()) {
-      setError('Prompt text is required')
-      return
+      setError('Prompt text is required');
+      return;
     }
 
     if (formData.visibility === 'TEAM' && !formData.teamId) {
-      setError('Please select a team for TEAM visibility')
-      return
+      setError('Please select a team for TEAM visibility');
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const token = localStorage.getItem('accessToken')
+      const token = localStorage.getItem('accessToken');
       const response = await fetch('/api/prompts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           title: formData.title.trim(),
           promptText: formData.promptText.trim(),
           tags: formData.tags,
           visibility: formData.visibility,
-          teamId: formData.teamId || undefined
-        })
-      })
+          teamId: formData.teamId || undefined,
+        }),
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (response.ok) {
-        router.push(`/prompts/${data.prompt.id}`)
+        router.push(`/prompts/${data.prompt.id}`);
       } else {
-        setError(data.error || 'Failed to create prompt')
+        setError(data.error || 'Failed to create prompt');
       }
     } catch (error) {
-      console.error('Error creating prompt:', error)
-      setError('An error occurred while creating the prompt')
+      console.error('Error creating prompt:', error);
+      setError('An error occurred while creating the prompt');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleChange = (field: string, value: string) => {
-    const newFormData = { ...formData, [field]: value }
-    
+    const newFormData = { ...formData, [field]: value };
+
     // Enforce visibility-team constraints
     if (field === 'visibility') {
       if (value === 'PRIVATE') {
         // Clear team assignment for private prompts
-        newFormData.teamId = ''
+        newFormData.teamId = '';
       }
     }
-    
-    setFormData(newFormData)
+
+    setFormData(newFormData);
     if (error) {
-      setError('')
+      setError('');
     }
-  }
+  };
 
   const handleAddTag = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault()
-      const newTag = tagInput.trim().toLowerCase()
+      e.preventDefault();
+      const newTag = tagInput.trim().toLowerCase();
       if (!formData.tags.includes(newTag) && formData.tags.length < 10) {
-        setFormData(prev => ({ ...prev, tags: [...prev.tags, newTag] }))
-        setTagInput('')
+        setFormData((prev) => ({ ...prev, tags: [...prev.tags, newTag] }));
+        setTagInput('');
       }
     }
-  }
+  };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
-    }))
-  }
+      tags: prev.tags.filter((tag) => tag !== tagToRemove),
+    }));
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      
+
       <main className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">Create New Prompt</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Create New Prompt
+            </h1>
             <p className="mt-1 text-sm text-gray-600">
               Create a new AI prompt to add to your library.
             </p>
@@ -161,8 +163,16 @@ export default function NewPromptPage() {
                 <div className="bg-red-50 border border-red-200 rounded-md p-4">
                   <div className="flex">
                     <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      <svg
+                        className="h-5 w-5 text-red-400"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     </div>
                     <div className="ml-3">
@@ -173,7 +183,10 @@ export default function NewPromptPage() {
               )}
 
               <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="title"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Title *
                 </label>
                 <input
@@ -192,7 +205,10 @@ export default function NewPromptPage() {
               </div>
 
               <div>
-                <label htmlFor="promptText" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="promptText"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Prompt Content *
                 </label>
                 <textarea
@@ -210,7 +226,10 @@ export default function NewPromptPage() {
               </div>
 
               <div>
-                <label htmlFor="tags" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="tags"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Tags
                 </label>
                 <div className="mt-1">
@@ -226,8 +245,15 @@ export default function NewPromptPage() {
                           onClick={() => handleRemoveTag(tag)}
                           className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full text-blue-400 hover:bg-blue-200 hover:text-blue-600 focus:outline-none"
                         >
-                          <svg className="w-2 h-2" fill="currentColor" viewBox="0 0 8 8">
-                            <path fillRule="evenodd" d="M5.354 4L8 6.646 6.646 8 4 5.354 1.354 8 0 6.646 2.646 4 0 1.354 1.354 0 4 2.646 6.646 0 8 1.354 5.354 4z" />
+                          <svg
+                            className="w-2 h-2"
+                            fill="currentColor"
+                            viewBox="0 0 8 8"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M5.354 4L8 6.646 6.646 8 4 5.354 1.354 8 0 6.646 2.646 4 0 1.354 1.354 0 4 2.646 6.646 0 8 1.354 5.354 4z"
+                            />
                           </svg>
                         </button>
                       </span>
@@ -251,7 +277,10 @@ export default function NewPromptPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label htmlFor="visibility" className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="visibility"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Visibility
                   </label>
                   <select
@@ -260,16 +289,27 @@ export default function NewPromptPage() {
                     value={formData.visibility}
                     onChange={(e) => handleChange('visibility', e.target.value)}
                   >
-                    <option value="PRIVATE">Private - Only visible to you</option>
-                    <option value="PUBLIC">Public - Visible to everyone, only you can edit</option>
-                    <option value="TEAM">Team - Only team members can access</option>
+                    <option value="PRIVATE">
+                      Private - Only visible to you
+                    </option>
+                    <option value="PUBLIC">
+                      Public - Visible to everyone, only you can edit
+                    </option>
+                    <option value="TEAM">
+                      Team - Only team members can access
+                    </option>
                   </select>
                 </div>
 
                 {teams.length > 0 && formData.visibility !== 'PRIVATE' && (
                   <div>
-                    <label htmlFor="teamId" className="block text-sm font-medium text-gray-700">
-                      {formData.visibility === 'TEAM' ? 'Select Team *' : 'Assign to Team (Optional)'}
+                    <label
+                      htmlFor="teamId"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      {formData.visibility === 'TEAM'
+                        ? 'Select Team *'
+                        : 'Assign to Team (Optional)'}
                     </label>
                     <select
                       id="teamId"
@@ -277,7 +317,11 @@ export default function NewPromptPage() {
                       value={formData.teamId}
                       onChange={(e) => handleChange('teamId', e.target.value)}
                     >
-                      <option value="">{formData.visibility === 'TEAM' ? 'Select a team...' : 'No team'}</option>
+                      <option value="">
+                        {formData.visibility === 'TEAM'
+                          ? 'Select a team...'
+                          : 'No team'}
+                      </option>
                       {teams.map((team) => (
                         <option key={team.id} value={team.id.toString()}>
                           {team.name} ({team.userRole})
@@ -285,14 +329,13 @@ export default function NewPromptPage() {
                       ))}
                     </select>
                     <p className="mt-1 text-xs text-gray-500">
-                      {formData.visibility === 'TEAM' 
+                      {formData.visibility === 'TEAM'
                         ? 'Required for team visibility. Only teams where you can edit are shown.'
-                        : 'Optional for public prompts. Only teams where you can edit are shown.'
-                      }
+                        : 'Optional for public prompts. Only teams where you can edit are shown.'}
                     </p>
                   </div>
                 )}
-                
+
                 {formData.visibility === 'PRIVATE' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
@@ -300,7 +343,8 @@ export default function NewPromptPage() {
                     </label>
                     <div className="mt-1 p-3 bg-gray-50 border border-gray-200 rounded-md">
                       <p className="text-sm text-gray-600">
-                        Private prompts cannot be assigned to teams. Only you will have access to this prompt.
+                        Private prompts cannot be assigned to teams. Only you
+                        will have access to this prompt.
                       </p>
                     </div>
                   </div>
@@ -308,7 +352,9 @@ export default function NewPromptPage() {
               </div>
 
               <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Tips for Writing Good Prompts</h3>
+                <h3 className="text-sm font-medium text-gray-900 mb-2">
+                  Tips for Writing Good Prompts
+                </h3>
                 <ul className="text-sm text-gray-600 space-y-1">
                   <li>• Be specific about what you want the AI to do</li>
                   <li>• Include examples when helpful</li>
@@ -328,13 +374,32 @@ export default function NewPromptPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || !formData.title.trim() || !formData.promptText.trim()}
+                  disabled={
+                    loading ||
+                    !formData.title.trim() ||
+                    !formData.promptText.trim()
+                  }
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading && (
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                   )}
                   {loading ? 'Creating...' : 'Create Prompt'}
@@ -345,5 +410,5 @@ export default function NewPromptPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }

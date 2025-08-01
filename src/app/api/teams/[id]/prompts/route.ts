@@ -1,37 +1,49 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { withAuth, AuthenticatedRequest } from '@/lib/middleware'
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { withAuth, AuthenticatedRequest } from '@/lib/middleware';
 
 async function checkTeamAdminPermission(teamId: number, userId: number) {
   const teamMember = await prisma.teamMember.findFirst({
     where: {
       team_id: teamId,
       user_id: userId,
-      role: 'ADMIN'
-    }
-  })
+      role: 'ADMIN',
+    },
+  });
 
-  return !!teamMember
+  return !!teamMember;
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   return withAuth(async (authReq: AuthenticatedRequest) => {
     try {
-      const teamId = parseInt(params.id)
+      const teamId = parseInt(params.id);
 
       if (isNaN(teamId)) {
-        return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 })
+        return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 });
       }
 
-      const hasPermission = await checkTeamAdminPermission(teamId, authReq.user!.userId)
+      const hasPermission = await checkTeamAdminPermission(
+        teamId,
+        authReq.user!.userId
+      );
       if (!hasPermission) {
-        return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+        return NextResponse.json(
+          { error: 'Admin access required' },
+          { status: 403 }
+        );
       }
 
-      const { promptId } = await authReq.json()
+      const { promptId } = await authReq.json();
 
       if (!promptId) {
-        return NextResponse.json({ error: 'Prompt ID is required' }, { status: 400 })
+        return NextResponse.json(
+          { error: 'Prompt ID is required' },
+          { status: 400 }
+        );
       }
 
       // Check if prompt exists and user has access to it
@@ -46,22 +58,28 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
               team: {
                 members: {
                   some: {
-                    user_id: authReq.user!.userId
-                  }
-                }
-              }
-            }
-          ]
-        }
-      })
+                    user_id: authReq.user!.userId,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      });
 
       if (!prompt) {
-        return NextResponse.json({ error: 'Prompt not found or access denied' }, { status: 404 })
+        return NextResponse.json(
+          { error: 'Prompt not found or access denied' },
+          { status: 404 }
+        );
       }
 
       // Check if prompt is already assigned to a team
       if (prompt.team_id) {
-        return NextResponse.json({ error: 'Prompt is already assigned to a team' }, { status: 409 })
+        return NextResponse.json(
+          { error: 'Prompt is already assigned to a team' },
+          { status: 409 }
+        );
       }
 
       // Assign prompt to team
@@ -73,32 +91,34 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             select: {
               id: true,
               email: true,
-              display_name: true
-            }
+              display_name: true,
+            },
           },
           team: {
             select: {
               id: true,
-              name: true
-            }
+              name: true,
+            },
           },
           tags: {
             select: {
               id: true,
-              name: true
-            }
-          }
-        }
-      })
+              name: true,
+            },
+          },
+        },
+      });
 
       return NextResponse.json({
         message: 'Prompt assigned to team successfully',
-        prompt: updatedPrompt
-      })
-
+        prompt: updatedPrompt,
+      });
     } catch (error) {
-      console.error('Assign prompt to team error:', error)
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      console.error('Assign prompt to team error:', error);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
     }
-  })(req)
+  })(req);
 }

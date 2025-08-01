@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { withAuth, AuthenticatedRequest } from '@/lib/middleware'
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { withAuth, AuthenticatedRequest } from '@/lib/middleware';
 
 async function checkPromptOwnership(promptId: number, userId: number) {
   const prompt = await prisma.prompt.findUnique({
@@ -8,19 +8,22 @@ async function checkPromptOwnership(promptId: number, userId: number) {
     select: {
       id: true,
       owner_id: true,
-      deleted_at: true
-    }
-  })
+      deleted_at: true,
+    },
+  });
 
   if (!prompt || prompt.deleted_at) {
-    return { hasPermission: false, error: 'Prompt not found' }
+    return { hasPermission: false, error: 'Prompt not found' };
   }
 
   if (prompt.owner_id !== userId) {
-    return { hasPermission: false, error: 'Only prompt owners can link prompts to teams' }
+    return {
+      hasPermission: false,
+      error: 'Only prompt owners can link prompts to teams',
+    };
   }
 
-  return { hasPermission: true, error: null }
+  return { hasPermission: true, error: null };
 }
 
 async function checkTeamMembership(teamId: number, userId: number) {
@@ -28,53 +31,73 @@ async function checkTeamMembership(teamId: number, userId: number) {
     where: {
       team_id: teamId,
       user_id: userId,
-      role: 'ADMIN'
+      role: 'ADMIN',
     },
     include: {
       team: {
         select: {
           id: true,
-          name: true
-        }
-      }
-    }
-  })
+          name: true,
+        },
+      },
+    },
+  });
 
   if (!member) {
-    return { hasPermission: false, error: 'Team not found or insufficient permissions' }
+    return {
+      hasPermission: false,
+      error: 'Team not found or insufficient permissions',
+    };
   }
 
-  return { hasPermission: true, team: member.team, error: null }
+  return { hasPermission: true, team: member.team, error: null };
 }
 
-export const PUT = withAuth(async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export const PUT = withAuth(
+  async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
     try {
-      const promptId = parseInt(params.id)
+      const promptId = parseInt(params.id);
 
       if (isNaN(promptId)) {
-        return NextResponse.json({ error: 'Invalid prompt ID' }, { status: 400 })
+        return NextResponse.json(
+          { error: 'Invalid prompt ID' },
+          { status: 400 }
+        );
       }
 
-      const { teamId } = await req.json()
+      const { teamId } = await req.json();
 
       // Check if user owns the prompt
-      const promptCheck = await checkPromptOwnership(promptId, req.user!.userId)
+      const promptCheck = await checkPromptOwnership(
+        promptId,
+        req.user!.userId
+      );
       if (!promptCheck.hasPermission) {
-        return NextResponse.json({ error: promptCheck.error }, { status: promptCheck.error === 'Prompt not found' ? 404 : 403 })
+        return NextResponse.json(
+          { error: promptCheck.error },
+          { status: promptCheck.error === 'Prompt not found' ? 404 : 403 }
+        );
       }
 
       if (teamId) {
         // Validate teamId is a number
-        const validatedTeamId = typeof teamId === 'string' ? parseInt(teamId) : teamId
-        
+        const validatedTeamId =
+          typeof teamId === 'string' ? parseInt(teamId) : teamId;
+
         if (isNaN(validatedTeamId)) {
-          return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 })
+          return NextResponse.json(
+            { error: 'Invalid team ID' },
+            { status: 400 }
+          );
         }
 
         // Linking to a team - check team membership and permissions
-        const teamCheck = await checkTeamMembership(validatedTeamId, req.user!.userId)
+        const teamCheck = await checkTeamMembership(
+          validatedTeamId,
+          req.user!.userId
+        );
         if (!teamCheck.hasPermission) {
-          return NextResponse.json({ error: teamCheck.error }, { status: 403 })
+          return NextResponse.json({ error: teamCheck.error }, { status: 403 });
         }
 
         // Link prompt to team
@@ -86,28 +109,28 @@ export const PUT = withAuth(async (req: AuthenticatedRequest, { params }: { para
               select: {
                 id: true,
                 display_name: true,
-                email: true
-              }
+                email: true,
+              },
             },
             team: {
               select: {
                 id: true,
-                name: true
-              }
+                name: true,
+              },
             },
             tags: {
               select: {
                 id: true,
-                name: true
-              }
-            }
-          }
-        })
+                name: true,
+              },
+            },
+          },
+        });
 
         return NextResponse.json({
           message: 'Prompt linked to team successfully',
-          prompt: updatedPrompt
-        })
+          prompt: updatedPrompt,
+        });
       } else {
         // Unlinking from team (setting team_id to null)
         const updatedPrompt = await prisma.prompt.update({
@@ -118,32 +141,35 @@ export const PUT = withAuth(async (req: AuthenticatedRequest, { params }: { para
               select: {
                 id: true,
                 display_name: true,
-                email: true
-              }
+                email: true,
+              },
             },
             team: {
               select: {
                 id: true,
-                name: true
-              }
+                name: true,
+              },
             },
             tags: {
               select: {
                 id: true,
-                name: true
-              }
-            }
-          }
-        })
+                name: true,
+              },
+            },
+          },
+        });
 
         return NextResponse.json({
           message: 'Prompt unlinked from team successfully',
-          prompt: updatedPrompt
-        })
+          prompt: updatedPrompt,
+        });
       }
-
-  } catch (error) {
-    console.error('Link prompt to team error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    } catch (error) {
+      console.error('Link prompt to team error:', error);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
   }
-})
+);

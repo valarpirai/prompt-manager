@@ -7,10 +7,10 @@ class OptionsManager {
   async init() {
     // Load current settings
     await this.loadSettings();
-    
+
     // Set up event listeners
     this.setupEventListeners();
-    
+
     // Check authentication status
     await this.checkAuthStatus();
   }
@@ -24,26 +24,30 @@ class OptionsManager {
       this.handleLogout();
     });
 
-    document.getElementById('save-settings-btn').addEventListener('click', () => {
-      this.saveSettings();
-    });
+    document
+      .getElementById('save-settings-btn')
+      .addEventListener('click', () => {
+        this.saveSettings();
+      });
 
-    document.getElementById('reset-settings-btn').addEventListener('click', () => {
-      this.resetSettings();
-    });
+    document
+      .getElementById('reset-settings-btn')
+      .addEventListener('click', () => {
+        this.resetSettings();
+      });
   }
 
   async loadSettings() {
     try {
       const response = await this.sendMessage({ type: 'GET_SETTINGS' });
-      
+
       if (response.success) {
         const settings = response.settings;
-        
+
         // Update UI with current settings
         document.getElementById('enabled-toggle').checked = settings.isEnabled;
         document.getElementById('api-url').value = settings.baseURL;
-        
+
         // Update auth status
         this.updateAuthUI(settings.isLoggedIn);
       } else {
@@ -59,7 +63,7 @@ class OptionsManager {
     try {
       const isEnabled = document.getElementById('enabled-toggle').checked;
       const baseURL = document.getElementById('api-url').value.trim();
-      
+
       // Validate URL
       if (!baseURL) {
         this.showStatus('Please enter a valid URL', 'error');
@@ -75,12 +79,12 @@ class OptionsManager {
 
       const settings = {
         pm_is_enabled: isEnabled,
-        pm_base_url: baseURL
+        pm_base_url: baseURL,
       };
 
       const response = await this.sendMessage({
         type: 'UPDATE_SETTINGS',
-        settings: settings
+        settings: settings,
       });
 
       if (response.success) {
@@ -97,17 +101,20 @@ class OptionsManager {
   resetSettings() {
     document.getElementById('enabled-toggle').checked = true;
     document.getElementById('api-url').value = 'https://prompt-manager.com';
-    
+
     this.showStatus('Settings reset to defaults', 'info');
   }
 
   async handleLogin() {
     try {
       const response = await this.sendMessage({ type: 'OPEN_LOGIN' });
-      
+
       if (response.success) {
-        this.showStatus('Login page opened. Please log in and return to this page.', 'info');
-        
+        this.showStatus(
+          'Login page opened. Please log in and return to this page.',
+          'info'
+        );
+
         // Poll for auth status changes
         this.pollAuthStatus();
       } else {
@@ -122,7 +129,7 @@ class OptionsManager {
   async handleLogout() {
     try {
       const response = await this.sendMessage({ type: 'LOGOUT' });
-      
+
       if (response.success) {
         this.updateAuthUI(false);
         this.showStatus('Logged out successfully', 'success');
@@ -138,7 +145,7 @@ class OptionsManager {
   async checkAuthStatus() {
     try {
       const response = await this.sendMessage({ type: 'GET_SETTINGS' });
-      
+
       if (response.success) {
         this.updateAuthUI(response.settings.isLoggedIn);
       }
@@ -151,7 +158,7 @@ class OptionsManager {
     const pollInterval = setInterval(async () => {
       try {
         const response = await this.sendMessage({ type: 'GET_SETTINGS' });
-        
+
         if (response.success && response.settings.isLoggedIn) {
           this.updateAuthUI(true);
           this.showStatus('Successfully logged in!', 'success');
@@ -179,7 +186,7 @@ class OptionsManager {
       notLoggedInDiv.classList.add('hidden');
       loginBtn.classList.add('hidden');
       logoutBtn.classList.remove('hidden');
-      
+
       // Try to get user email from token (if available)
       this.updateUserEmail();
     } else {

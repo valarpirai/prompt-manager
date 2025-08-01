@@ -1,8 +1,9 @@
 Prompt Manager Product Specification
+
 1. Overview
-The Prompt Manager is a web-based application designed to help users create, manage, and collaborate on AI prompts. It supports user signup via email/password and Google OAuth, email verification, prompt creation with version history, team collaboration, and a prompt generator powered by a Large Language Model (LLM). The application provides REST APIs for programmatic access, secured with JWT-based authentication, rate limiting, and role-based access control (RBAC). It uses PostgreSQL 16 with Prisma for database management and includes features like prompt search and displaying popular prompts.
+   The Prompt Manager is a web-based application designed to help users create, manage, and collaborate on AI prompts. It supports user signup via email/password and Google OAuth, email verification, prompt creation with version history, team collaboration, and a prompt generator powered by a Large Language Model (LLM). The application provides REST APIs for programmatic access, secured with JWT-based authentication, rate limiting, and role-based access control (RBAC). It uses PostgreSQL 16 with Prisma for database management and includes features like prompt search and displaying popular prompts.
 2. Features
-2.1 User Authentication
+   2.1 User Authentication
 
 User Signup:
 
@@ -11,12 +12,10 @@ Methods:
 Email/password: Users can sign up with a valid email and password.
 Google OAuth: Users can sign up or log in using their Gmail account via Google OAuth.
 
-
 Validation:
 
 Email must be unique and follow a valid format (e.g., user@domain.com).
 Password must meet complexity requirements (e.g., minimum 8 characters, including uppercase, lowercase, number, and special character).
-
 
 Email Verification:
 
@@ -25,22 +24,16 @@ The link expires after 24 hours.
 Users cannot access the application (except for a verification pending page) until their email is verified.
 Google OAuth users are automatically verified (since Google handles email validation).
 
-
-
-
 User Login:
 
 Supports login via email/password or Google OAuth.
 On successful login, users receive a JWT token for API access.
 JWT tokens expire after a configurable period (e.g., 1 hour) and can be refreshed with a refresh token.
 
-
 User Profile:
 
 Basic profile information: email, display name, and optional fields like avatar or bio.
 Users can update their profile or change their password (for email/password accounts).
-
-
 
 2.2 Prompt Management
 
@@ -59,13 +52,11 @@ created_at: Timestamp, when the prompt was created.
 updated_at: Timestamp, when the prompt was last modified.
 created_by: Foreign key referencing the user who created the prompt version.
 
-
 Prompt Creation:
 
 Users can create prompts with a title, prompt text, tags, and visibility (public or private).
 Prompts are automatically assigned to the creating user as the owner.
 Initial version is set to 1, and usage_count is set to 0.
-
 
 Version History:
 
@@ -76,17 +67,13 @@ The full prompt state (title, prompt text, tags).
 Timestamp of the change.
 User who made the change.
 
-
 Users can view the version history of a prompt and revert to a previous version.
 Reverting creates a new version with the restored state.
-
 
 Prompt Deletion:
 
 Soft deletion: Sets deleted_at timestamp without removing the prompt from the database.
 Users can restore soft-deleted prompts within a configurable period (e.g., 30 days) before permanent deletion.
-
-
 
 2.3 Prompt Generator
 
@@ -98,13 +85,10 @@ Generated prompts are displayed for user review.
 Users can edit and approve the prompt, after which it is saved with the properties listed above (title, prompt text, tags, etc.).
 Default visibility is private, but users can change it to public during approval.
 
-
 Implementation Notes:
 
 The LLM API call should include context to ensure relevant and high-quality prompt generation.
 Rate limits apply to LLM calls to prevent abuse (e.g., 10 generations per user per hour).
-
-
 
 2.4 Team Management
 
@@ -113,14 +97,12 @@ Team Creation:
 Users can create teams with a name and optional description.
 The creator is automatically assigned the admin role.
 
-
 Team Roles:
 
 Admin: Can add/remove users and prompts, edit team details, and manage all prompts in the team.
 Editor: Can edit prompts assigned to the team.
 Viewer: Can view prompts assigned to the team.
 Roles are team-specific (a user can have different roles in different teams).
-
 
 Team Operations:
 
@@ -130,13 +112,10 @@ Only team members can access team-associated prompts (based on their role).
 Prompts assigned to a team have a team_id set in the database.
 Public prompts are not tied to teams and are accessible to all users.
 
-
 Access Control:
 
 Private prompts are only accessible to the owner or team members (with appropriate roles).
 Public prompts are viewable by all authenticated users but editable only by the owner or team editors/admins.
-
-
 
 2.5 Search Prompts
 
@@ -150,16 +129,12 @@ Filters:
 Visibility: Public, private (user-owned), or team-specific prompts.
 Team: Filter by prompts assigned to a specific team (for team members).
 
-
 Results are paginated (e.g., 20 prompts per page) and sortable by title, created_at, or usage_count.
-
 
 Implementation Notes:
 
 Use full-text search capabilities in PostgreSQL 16 for efficient searching on title and prompt_text.
 Tag searches should support AND/OR logic (e.g., prompts with both "java" and "code review").
-
-
 
 2.6 Popular Prompts
 
@@ -171,13 +146,10 @@ Sorting options: Top prompts by usage count (all-time, last 7 days, last 30 days
 Display limit: Top 10 prompts (configurable).
 Each prompt shows title, tags, usage_count, and a preview of prompt_text.
 
-
 Implementation Notes:
 
 Use a database query to aggregate usage_count and filter by visibility = public.
 Cache results for performance (e.g., refresh every 5 minutes).
-
-
 
 2.7 REST APIs
 
@@ -191,7 +163,6 @@ POST /api/auth/verify-email: Verify email with token.
 GET /api/users/me: Get current user profile.
 PUT /api/users/me: Update user profile.
 
-
 Prompt Management:
 
 POST /api/prompts: Create a new prompt.
@@ -202,11 +173,9 @@ GET /api/prompts/:id/versions: List version history for a prompt.
 POST /api/prompts/:id/revert: Revert to a specific version.
 GET /api/prompts: List prompts (with search and filter parameters).
 
-
 Prompt Generator:
 
 POST /api/prompts/generate: Generate a prompt using LLM based on user input.
-
 
 Team Management:
 
@@ -218,13 +187,9 @@ DELETE /api/teams/:id/users/:userId: Remove user from team (admin only).
 POST /api/teams/:id/prompts: Assign prompt to team (admin only).
 DELETE /api/teams/:id/prompts/:promptId: Remove prompt from team (admin only).
 
-
 Popular Prompts:
 
 GET /api/prompts/popular: List popular prompts with sorting options.
-
-
-
 
 Security:
 
@@ -237,82 +202,78 @@ Team members can access team prompts based on their role (admin, editor, viewer)
 Admins have full control over team resources.
 Endpoint-specific permissions (e.g., only prompt owners or team editors/admins can update prompts).
 
-
-
-
-
 3. Database Schema (Using PostgreSQL 16 and Prisma)
-Below is the Prisma schema reflecting the requirements:
-prismamodel User {
-  id            Int       @id @default(autoincrement())
-  email         String    @unique
-  password      String?   // Null for Google OAuth users
-  display_name  String?
-  is_verified   Boolean   @default(false)
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
-  prompts       Prompt[]  @relation("PromptOwner")
-  team_members  TeamMember[]
-}
+   Below is the Prisma schema reflecting the requirements:
+   prismamodel User {
+   id Int @id @default(autoincrement())
+   email String @unique
+   password String? // Null for Google OAuth users
+   display_name String?
+   is_verified Boolean @default(false)
+   created_at DateTime @default(now())
+   updated_at DateTime @updatedAt
+   prompts Prompt[] @relation("PromptOwner")
+   team_members TeamMember[]
+   }
 
 model Prompt {
-  id            Int       @id @default(autoincrement())
-  title         String    @db.VarChar(100)
-  prompt_text   String
-  usage_count   Int       @default(0)
-  version       Int       @default(1)
-  deleted_at    DateTime?
-  visibility    String    // Enum: 'public', 'private'
-  owner_id      Int
-  owner         User      @relation("PromptOwner", fields: [owner_id], references: [id])
-  team_id       Int?
-  team          Team?     @relation(fields: [team_id], references: [id])
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
-  created_by    Int
-  creator       User      @relation(fields: [created_by], references: [id])
-  tags          Tag[]
-  versions      PromptVersion[]
+id Int @id @default(autoincrement())
+title String @db.VarChar(100)
+prompt_text String
+usage_count Int @default(0)
+version Int @default(1)
+deleted_at DateTime?
+visibility String // Enum: 'public', 'private'
+owner_id Int
+owner User @relation("PromptOwner", fields: [owner_id], references: [id])
+team_id Int?
+team Team? @relation(fields: [team_id], references: [id])
+created_at DateTime @default(now())
+updated_at DateTime @updatedAt
+created_by Int
+creator User @relation(fields: [created_by], references: [id])
+tags Tag[]
+versions PromptVersion[]
 }
 
 model PromptVersion {
-  id            Int       @id @default(autoincrement())
-  prompt_id     Int
-  prompt        Prompt    @relation(fields: [prompt_id], references: [id])
-  title         String    @db.VarChar(100)
-  prompt_text   String
-  version       Int
-  created_at    DateTime  @default(now())
-  created_by    Int
-  creator       User      @relation(fields: [created_by], references: [id])
-  tags          Tag[]
+id Int @id @default(autoincrement())
+prompt_id Int
+prompt Prompt @relation(fields: [prompt_id], references: [id])
+title String @db.VarChar(100)
+prompt_text String
+version Int
+created_at DateTime @default(now())
+created_by Int
+creator User @relation(fields: [created_by], references: [id])
+tags Tag[]
 }
 
 model Tag {
-  id            Int       @id @default(autoincrement())
-  name          String    @unique
-  prompts       Prompt[]
-  prompt_versions PromptVersion[]
+id Int @id @default(autoincrement())
+name String @unique
+prompts Prompt[]
+prompt_versions PromptVersion[]
 }
 
 model Team {
-  id            Int       @id @default(autoincrement())
-  name          String
-  description   String?
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
-  prompts       Prompt[]
-  members       TeamMember[]
+id Int @id @default(autoincrement())
+name String
+description String?
+created_at DateTime @default(now())
+updated_at DateTime @updatedAt
+prompts Prompt[]
+members TeamMember[]
 }
 
 model TeamMember {
-  id            Int       @id @default(autoincrement())
-  user_id       Int
-  user          User      @relation(fields: [user_id], references: [id])
-  team_id       Int
-  team          Team      @relation(fields: [team_id], references: [id])
-  role          String    // Enum: 'admin', 'editor', 'viewer'
-  created_at    DateTime  @default(now())
+id Int @id @default(autoincrement())
+user_id Int
+user User @relation(fields: [user_id], references: [id])
+team_id Int
+team Team @relation(fields: [team_id], references: [id])
+role String // Enum: 'admin', 'editor', 'viewer'
+created_at DateTime @default(now())
 }
 
 Notes:
@@ -321,8 +282,6 @@ Uses soft deletion for prompts (deleted_at).
 Full-text search indexes on Prompt.title and Prompt.prompt_text for efficient searching.
 Tag model supports many-to-many relationships with Prompt and PromptVersion.
 TeamMember model links users to teams with roles.
-
-
 
 4. Technical Requirements
 
@@ -334,17 +293,14 @@ Authentication: JWT (e.g., using jsonwebtoken library), Google OAuth (e.g., via 
 Rate Limiting: Implement using middleware (e.g., express-rate-limit).
 LLM Integration: Use xAI’s API (or similar) for prompt generation.
 
-
 Frontend
 
 Framework: React with Next.js for a responsive UI.
 Features: Forms for prompt creation, search UI, team management dashboard, and prompt generator interface.
 
-
 Deployement:
 Containerize application
 Create Docker-compose.yml for dependent services like postgres, pgbouncer
-
 
 5. Assumptions
 
@@ -362,25 +318,20 @@ Passwords are hashed (e.g., using bcrypt).
 JWT tokens are securely signed and validated.
 HTTPS is enforced for all API and frontend communication.
 
-
 Scalability:
 
 Database queries are optimized with indexes (e.g., for search and popular prompts).
 Caching is used for frequently accessed data (e.g., popular prompts).
-
 
 Reliability:
 
 Database backups are performed regularly.
 Soft deletion ensures data recovery within a defined period.
 
-
 Performance:
 
 API response time: <200ms for 95% of requests (excluding LLM calls).
 Search results return within 500ms.
-
-
 
 7. Future Considerations
 
@@ -388,6 +339,5 @@ Support for additional authentication methods (e.g., GitHub, Microsoft).
 Advanced analytics for prompt usage (e.g., usage trends, user-specific metrics).
 Export/import prompts in bulk.
 Integration with external tools (e.g., IDE plugins for prompt execution).
-
 
 This spec covers all requirements and clarified details. If you have additional requirements, modifications, or further questions, please let me know, and I can refine the spec accordingly!

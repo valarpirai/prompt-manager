@@ -1,49 +1,68 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { withAuth, AuthenticatedRequest } from '@/lib/middleware'
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { withAuth, AuthenticatedRequest } from '@/lib/middleware';
 
 async function checkTeamAdminPermission(teamId: number, userId: number) {
   const teamMember = await prisma.teamMember.findFirst({
     where: {
       team_id: teamId,
       user_id: userId,
-      role: 'ADMIN'
-    }
-  })
+      role: 'ADMIN',
+    },
+  });
 
-  return !!teamMember
+  return !!teamMember;
 }
 
-export const PUT = withAuth(async (req: AuthenticatedRequest, { params }: { params: { id: string; userId: string } }) => {
+export const PUT = withAuth(
+  async (
+    req: AuthenticatedRequest,
+    { params }: { params: { id: string; userId: string } }
+  ) => {
     try {
-      const teamId = parseInt(params.id)
-      const targetUserId = parseInt(params.userId)
+      const teamId = parseInt(params.id);
+      const targetUserId = parseInt(params.userId);
 
       if (isNaN(teamId) || isNaN(targetUserId)) {
-        return NextResponse.json({ error: 'Invalid team or user ID' }, { status: 400 })
+        return NextResponse.json(
+          { error: 'Invalid team or user ID' },
+          { status: 400 }
+        );
       }
 
-      const hasPermission = await checkTeamAdminPermission(teamId, req.user!.userId)
+      const hasPermission = await checkTeamAdminPermission(
+        teamId,
+        req.user!.userId
+      );
       if (!hasPermission) {
-        return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+        return NextResponse.json(
+          { error: 'Admin access required' },
+          { status: 403 }
+        );
       }
 
-      const { role } = await req.json()
+      const { role } = await req.json();
 
       if (!role || !['ADMIN', 'VIEWER'].includes(role)) {
-        return NextResponse.json({ error: 'Valid role is required' }, { status: 400 })
+        return NextResponse.json(
+          { error: 'Valid role is required' },
+          { status: 400 }
+        );
       }
 
       // Check if member exists
       const existingMember = await prisma.teamMember.findFirst({
         where: {
           team_id: teamId,
-          user_id: targetUserId
-        }
-      })
+          user_id: targetUserId,
+        },
+      });
 
       if (!existingMember) {
-        return NextResponse.json({ error: 'Team member not found' }, { status: 404 })
+        return NextResponse.json(
+          { error: 'Team member not found' },
+          { status: 404 }
+        );
       }
 
       // Prevent removing the last admin
@@ -51,14 +70,17 @@ export const PUT = withAuth(async (req: AuthenticatedRequest, { params }: { para
         const adminCount = await prisma.teamMember.count({
           where: {
             team_id: teamId,
-            role: 'ADMIN'
-          }
-        })
+            role: 'ADMIN',
+          },
+        });
 
         if (adminCount <= 1) {
-          return NextResponse.json({ 
-            error: 'Cannot change role - team must have at least one admin' 
-          }, { status: 400 })
+          return NextResponse.json(
+            {
+              error: 'Cannot change role - team must have at least one admin',
+            },
+            { status: 400 }
+          );
         }
       }
 
@@ -71,50 +93,69 @@ export const PUT = withAuth(async (req: AuthenticatedRequest, { params }: { para
             select: {
               id: true,
               email: true,
-              display_name: true
-            }
-          }
-        }
-      })
+              display_name: true,
+            },
+          },
+        },
+      });
 
       return NextResponse.json({
         message: 'Member role updated successfully',
-        member: updatedMember
-      })
-
+        member: updatedMember,
+      });
     } catch (error) {
-      console.error('Update team member error:', error)
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      console.error('Update team member error:', error);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
     }
-});
+  }
+);
 
-export const DELETE = withAuth(async (req: AuthenticatedRequest, { params }: { params: { id: string; userId: string } }) => {
+export const DELETE = withAuth(
+  async (
+    req: AuthenticatedRequest,
+    { params }: { params: { id: string; userId: string } }
+  ) => {
     try {
-      const teamId = parseInt(params.id)
-      const targetUserId = parseInt(params.userId)
+      const teamId = parseInt(params.id);
+      const targetUserId = parseInt(params.userId);
 
       if (isNaN(teamId) || isNaN(targetUserId)) {
-        return NextResponse.json({ error: 'Invalid team or user ID' }, { status: 400 })
+        return NextResponse.json(
+          { error: 'Invalid team or user ID' },
+          { status: 400 }
+        );
       }
 
       // Allow users to remove themselves OR admins to remove others
-      const isRemovingSelf = targetUserId === req.user!.userId
-      const hasAdminPermission = await checkTeamAdminPermission(teamId, req.user!.userId)
+      const isRemovingSelf = targetUserId === req.user!.userId;
+      const hasAdminPermission = await checkTeamAdminPermission(
+        teamId,
+        req.user!.userId
+      );
 
       if (!isRemovingSelf && !hasAdminPermission) {
-        return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
+        return NextResponse.json(
+          { error: 'Permission denied' },
+          { status: 403 }
+        );
       }
 
       // Check if member exists
       const existingMember = await prisma.teamMember.findFirst({
         where: {
           team_id: teamId,
-          user_id: targetUserId
-        }
-      })
+          user_id: targetUserId,
+        },
+      });
 
       if (!existingMember) {
-        return NextResponse.json({ error: 'Team member not found' }, { status: 404 })
+        return NextResponse.json(
+          { error: 'Team member not found' },
+          { status: 404 }
+        );
       }
 
       // Prevent removing the last admin
@@ -122,28 +163,36 @@ export const DELETE = withAuth(async (req: AuthenticatedRequest, { params }: { p
         const adminCount = await prisma.teamMember.count({
           where: {
             team_id: teamId,
-            role: 'ADMIN'
-          }
-        })
+            role: 'ADMIN',
+          },
+        });
 
         if (adminCount <= 1) {
-          return NextResponse.json({ 
-            error: 'Cannot remove the last admin from the team' 
-          }, { status: 400 })
+          return NextResponse.json(
+            {
+              error: 'Cannot remove the last admin from the team',
+            },
+            { status: 400 }
+          );
         }
       }
 
       // Remove member from team
       await prisma.teamMember.delete({
-        where: { id: existingMember.id }
-      })
+        where: { id: existingMember.id },
+      });
 
       return NextResponse.json({
-        message: isRemovingSelf ? 'Left team successfully' : 'Member removed successfully'
-      })
-
+        message: isRemovingSelf
+          ? 'Left team successfully'
+          : 'Member removed successfully',
+      });
     } catch (error) {
-      console.error('Remove team member error:', error)
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      console.error('Remove team member error:', error);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
     }
-});
+  }
+);

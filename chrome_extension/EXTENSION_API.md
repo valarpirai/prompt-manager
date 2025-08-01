@@ -17,6 +17,7 @@ This page will handle the login and communicate the authentication tokens back t
 ### 2. API Endpoints
 
 #### Login Endpoint
+
 ```
 POST /api/auth/extension-login
 Content-Type: application/json
@@ -28,6 +29,7 @@ Content-Type: application/json
 ```
 
 **Response (Success):**
+
 ```json
 {
   "message": "Extension login successful",
@@ -45,6 +47,7 @@ Content-Type: application/json
 ```
 
 #### Token Refresh
+
 ```
 POST /api/auth/extension-refresh
 Content-Type: application/json
@@ -55,6 +58,7 @@ Content-Type: application/json
 ```
 
 **Response (Success):**
+
 ```json
 {
   "message": "Token refreshed successfully",
@@ -74,12 +78,14 @@ Content-Type: application/json
 ### 3. Prompt Access
 
 #### Get Prompt by Exact Title
+
 ```
 GET /api/prompts?title=promptname&exact=true
 Authorization: Bearer {accessToken}
 ```
 
 **Response (Success):**
+
 ```json
 {
   "prompts": [
@@ -119,12 +125,14 @@ Authorization: Bearer {accessToken}
 ```
 
 #### Track Prompt Usage
+
 ```
 POST /api/prompts/{promptId}/usage
 Authorization: Bearer {accessToken}
 ```
 
 **Response (Success):**
+
 ```json
 {
   "message": "Usage count updated successfully",
@@ -143,6 +151,7 @@ All endpoints return standard HTTP status codes and error messages:
 ```
 
 Common status codes:
+
 - `400` - Bad Request (missing/invalid parameters)
 - `401` - Unauthorized (invalid/missing token)
 - `403` - Forbidden (email not verified)
@@ -167,7 +176,7 @@ All extension-specific endpoints include proper CORS headers to allow cross-orig
 // Background script example
 class AuthManager {
   constructor() {
-    this.baseUrl = 'https://your-domain.com/api'
+    this.baseUrl = 'https://your-domain.com/api';
   }
 
   async login(email, password) {
@@ -176,74 +185,77 @@ class AuthManager {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password })
-    })
+      body: JSON.stringify({ email, password }),
+    });
 
     if (response.ok) {
-      const data = await response.json()
+      const data = await response.json();
       await chrome.storage.local.set({
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
         user: data.user,
-        tokenExpiry: data.tokenExpiry
-      })
-      return data
+        tokenExpiry: data.tokenExpiry,
+      });
+      return data;
     }
-    throw new Error('Login failed')
+    throw new Error('Login failed');
   }
 
   async getPromptByTitle(title) {
-    const { accessToken } = await chrome.storage.local.get(['accessToken'])
-    
-    const response = await fetch(`${this.baseUrl}/prompts?title=${encodeURIComponent(title)}&exact=true`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`
+    const { accessToken } = await chrome.storage.local.get(['accessToken']);
+
+    const response = await fetch(
+      `${this.baseUrl}/prompts?title=${encodeURIComponent(title)}&exact=true`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       }
-    })
+    );
 
     if (response.ok) {
-      const data = await response.json()
-      return data.prompts[0] || null
+      const data = await response.json();
+      return data.prompts[0] || null;
     }
-    
+
     if (response.status === 401) {
       // Token expired, try to refresh
-      await this.refreshToken()
+      await this.refreshToken();
       // Retry the request...
     }
-    
-    return null
+
+    return null;
   }
 
   async trackUsage(promptId) {
-    const { accessToken } = await chrome.storage.local.get(['accessToken'])
-    
+    const { accessToken } = await chrome.storage.local.get(['accessToken']);
+
     await fetch(`${this.baseUrl}/prompts/${promptId}/usage`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${accessToken}`
-      }
-    })
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
   }
 
   async refreshToken() {
-    const { refreshToken } = await chrome.storage.local.get(['refreshToken'])
-    
+    const { refreshToken } = await chrome.storage.local.get(['refreshToken']);
+
     const response = await fetch(`${this.baseUrl}/auth/extension-refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ refreshToken })
-    })
+      body: JSON.stringify({ refreshToken }),
+    });
 
     if (response.ok) {
-      const data = await response.json()
+      const data = await response.json();
       await chrome.storage.local.set({
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
-        tokenExpiry: data.tokenExpiry
-      })
+        tokenExpiry: data.tokenExpiry,
+      });
     }
   }
 }

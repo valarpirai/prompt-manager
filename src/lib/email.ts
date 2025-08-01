@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer'
+import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -8,11 +8,11 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
-})
+});
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const verificationUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${token}`
-  
+  const verificationUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${token}`;
+
   const mailOptions = {
     from: process.env.FROM_EMAIL,
     to: email,
@@ -40,13 +40,13 @@ export async function sendVerificationEmail(email: string, token: string) {
         </p>
       </div>
     `,
-  }
+  };
 
   try {
-    await transporter.sendMail(mailOptions)
-    console.log('Verification email sent to:', email)
+    await transporter.sendMail(mailOptions);
+    console.log('Verification email sent to:', email);
   } catch (error) {
-    console.error('Error sending verification email:', error)
-    throw new Error('Failed to send verification email')
+    console.error('Error sending verification email:', error);
+    throw new Error('Failed to send verification email');
   }
 }

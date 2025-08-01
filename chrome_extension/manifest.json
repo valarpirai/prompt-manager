@@ -3,14 +3,8 @@
   "name": "Prompt Manager Extension",
   "version": "1.0.0",
   "description": "Insert prompts from Prompt Manager into text fields using ::promptname",
-  "permissions": [
-    "storage",
-    "activeTab"
-  ],
-  "host_permissions": [
-    "http://*/*",
-    "https://*/*"
-  ],
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["http://*/*", "https://*/*"],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

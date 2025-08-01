@@ -1,25 +1,25 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { logout, User } from '@/lib/auth-client'
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { logout, User } from '@/lib/auth-client';
 
 export default function Navigation() {
-  const [user, setUser] = useState<User | null>(null)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const pathname = usePathname()
+  const [user, setUser] = useState<User | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
-    const userData = localStorage.getItem('user')
+    const userData = localStorage.getItem('user');
     if (userData) {
-      setUser(JSON.parse(userData))
+      setUser(JSON.parse(userData));
     }
-  }, [])
+  }, []);
 
   const handleLogout = () => {
-    logout()
-  }
+    logout();
+  };
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard' },
@@ -27,15 +27,20 @@ export default function Navigation() {
     { href: '/prompts/generate', label: 'Generate' },
     { href: '/prompts/popular', label: 'Popular' },
     { href: '/teams', label: 'Teams' },
-  ]
+  ];
 
   return (
     <nav className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link href={user ? '/dashboard' : '/'} className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">Prompt Manager</h1>
+            <Link
+              href={user ? '/dashboard' : '/'}
+              className="flex items-center"
+            >
+              <h1 className="text-xl font-bold text-gray-900">
+                Prompt Manager
+              </h1>
             </Link>
 
             {user && (
@@ -67,14 +72,26 @@ export default function Navigation() {
                   <span className="sr-only">Open user menu</span>
                   <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
                     <span className="font-medium text-gray-700">
-                      {(user.display_name || user.email).charAt(0).toUpperCase()}
+                      {(user.display_name || user.email)
+                        .charAt(0)
+                        .toUpperCase()}
                     </span>
                   </div>
                   <span className="ml-2 text-gray-700 hidden md:block">
                     {user.display_name || user.email}
                   </span>
-                  <svg className="ml-2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="ml-2 h-4 w-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </button>
 
@@ -123,8 +140,18 @@ export default function Navigation() {
                 className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
               >
                 <span className="sr-only">Open main menu</span>
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
                 </svg>
               </button>
             </div>
@@ -154,7 +181,9 @@ export default function Navigation() {
                 <div className="flex-shrink-0">
                   <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
                     <span className="font-medium text-gray-700">
-                      {(user.display_name || user.email).charAt(0).toUpperCase()}
+                      {(user.display_name || user.email)
+                        .charAt(0)
+                        .toUpperCase()}
                     </span>
                   </div>
                 </div>
@@ -162,7 +191,9 @@ export default function Navigation() {
                   <div className="text-base font-medium text-gray-800">
                     {user.display_name || 'User'}
                   </div>
-                  <div className="text-sm font-medium text-gray-500">{user.email}</div>
+                  <div className="text-sm font-medium text-gray-500">
+                    {user.email}
+                  </div>
                 </div>
               </div>
               <div className="mt-3 space-y-1">
@@ -185,5 +216,5 @@ export default function Navigation() {
         )}
       </div>
     </nav>
-  )
+  );
 }

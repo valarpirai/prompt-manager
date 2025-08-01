@@ -54,6 +54,7 @@ A Chrome extension that allows users to seamlessly insert prompts from the Promp
 ## Supported Elements
 
 The extension works with:
+
 - `<input type="text">`, `<input type="search">`, `<input type="url">`, `<input type="email">`
 - `<textarea>` elements
 - Any element with `contenteditable="true"`
@@ -61,6 +62,7 @@ The extension works with:
 ## Error Handling
 
 The extension provides helpful error messages:
+
 - **"Prompt 'name' not found"**: The prompt doesn't exist or you don't have access
 - **"Please log in"**: Authentication required
 - **"Failed to fetch prompt"**: Network or API error
@@ -68,12 +70,14 @@ The extension provides helpful error messages:
 ## Technical Details
 
 ### Architecture
+
 - **Manifest V3**: Latest Chrome extension standard
 - **Content Script**: Detects triggers and handles text replacement
 - **Background Service Worker**: Handles API requests and authentication
 - **Options Page**: Configuration and user management
 
 ### Security
+
 - JWT tokens stored securely in Chrome's local storage
 - All API requests use HTTPS
 - Content Security Policy compliant
@@ -82,6 +86,7 @@ The extension provides helpful error messages:
 ### API Integration
 
 The extension integrates with these Prompt Manager API endpoints:
+
 - `GET /api/prompts?title={name}&exact=true` - Fetch prompt by title
 - `POST /api/prompts/:id/usage` - Increment usage count
 - Token refresh endpoints for authentication
@@ -89,6 +94,7 @@ The extension integrates with these Prompt Manager API endpoints:
 ## Development
 
 ### Files Structure
+
 ```
 chrome_extension/
 ├── manifest.json          # Extension configuration
@@ -104,6 +110,7 @@ chrome_extension/
 ```
 
 ### Permissions
+
 - `storage`: For storing JWT tokens and settings
 - `activeTab`: For interacting with web pages
 - `http://*/*`, `https://*/*`: For API requests
@@ -111,16 +118,19 @@ chrome_extension/
 ## Troubleshooting
 
 ### Extension Not Working
+
 - Check if the extension is enabled in `chrome://extensions/`
 - Ensure you're logged in via the Options page
 - Verify the API URL is correct in settings
 
 ### Prompts Not Found
+
 - Check that the prompt exists in your Prompt Manager service
 - Ensure you have access to the prompt (visibility permissions)
 - Verify the prompt name is spelled correctly (case-insensitive)
 
 ### Authentication Issues
+
 - Try logging out and logging back in
 - Check if your Prompt Manager service is accessible
 - Clear extension data and reconfigure if needed
@@ -133,6 +143,7 @@ chrome_extension/
 ## Privacy
 
 The extension:
+
 - Only stores authentication tokens locally
 - Only makes requests to your configured Prompt Manager service
 - Does not collect or transmit personal data
@@ -141,6 +152,7 @@ The extension:
 ## Support
 
 For issues related to the extension, please check:
+
 1. This README for common solutions
 2. Chrome's extension developer console for error messages
 3. Your Prompt Manager service status and API availability
