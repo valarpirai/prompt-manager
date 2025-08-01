@@ -60,6 +60,8 @@ export default function PromptsPage() {
     isOpen: false,
     prompt: null
   })
+  const [importModal, setImportModal] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -244,6 +246,66 @@ export default function PromptsPage() {
     })
   }
 
+  const handleExport = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      const response = await fetch('/api/prompts/export', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'prompts-export.csv'
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        alert('Failed to export prompts')
+      }
+    } catch (error) {
+      console.error('Export error:', error)
+      alert('An error occurred while exporting prompts')
+    }
+  }
+
+  const handleImport = async (file: File) => {
+    setImportLoading(true)
+    try {
+      const token = localStorage.getItem('accessToken')
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/prompts/import', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        alert(`Import completed! Imported: ${data.results.imported}, Skipped: ${data.results.skipped}${data.results.errors.length > 0 ? `\n\nErrors:\n${data.results.errors.slice(0, 5).join('\n')}${data.results.errors.length > 5 ? '\n...' : ''}` : ''}`)
+        fetchPrompts() // Refresh the list
+      } else {
+        alert(`Import failed: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Import error:', error)
+      alert('An error occurred while importing prompts')
+    } finally {
+      setImportLoading(false)
+      setImportModal(false)
+    }
+  }
+
   const filteredTags = availableTags.filter(tag => 
     tag.name.toLowerCase().includes(tagSearchInput.toLowerCase()) &&
     !filters.tags.includes(tag.name)
@@ -271,15 +333,35 @@ export default function PromptsPage() {
                 Manage and organize your AI prompts
               </p>
             </div>
-            <Link
-              href="/prompts/new"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              New Prompt
-            </Link>
+            <div className="flex space-x-3">
+              <button
+                onClick={handleExport}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2-8H7a2 2 0 00-2 2v11a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2z" />
+                </svg>
+                Export CSV
+              </button>
+              <button
+                onClick={() => setImportModal(true)}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M12 16l-3-3m0 0l3-3m-3 3h6" />
+                </svg>
+                Import CSV
+              </button>
+              <Link
+                href="/prompts/new"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                New Prompt
+              </Link>
+            </div>
           </div>
 
           <div className="bg-white shadow rounded-lg mb-6">
@@ -672,6 +754,52 @@ export default function PromptsPage() {
         currentTeamId={linkTeamModal.prompt?.team?.id}
         promptTitle={linkTeamModal.prompt?.title || ''}
       />
+
+      {/* Import Modal */}
+      {importModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Import Prompts from CSV</h3>
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  CSV file should contain columns: Name, Text, and optionally Visibility and Tags.
+                </p>
+                <p className="text-xs text-gray-500">
+                  Tags should be separated by semicolons (;)
+                </p>
+              </div>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    handleImport(file)
+                  }
+                }}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                disabled={importLoading}
+              />
+              {importLoading && (
+                <div className="mt-3 text-center">
+                  <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-sm text-gray-600">Importing...</span>
+                </div>
+              )}
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={() => setImportModal(false)}
+                  disabled={importLoading}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
