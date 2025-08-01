@@ -11,7 +11,8 @@
     "lint:fix": "next lint --fix",
     "format": "prettier --check './**/*.{js,jsx,ts,tsx,css,md,json}'",
     "format:fix": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}'",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
