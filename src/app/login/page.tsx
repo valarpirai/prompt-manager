@@ -46,7 +46,14 @@ export default function LoginPage() {
       localStorage.setItem('refreshToken', result.refreshToken)
       localStorage.setItem('user', JSON.stringify(result.user))
 
-      router.push('/dashboard')
+      const redirectTo = searchParams.get('redirect') || '/dashboard'
+      const decodedRedirect = decodeURIComponent(redirectTo)
+      
+      if (decodedRedirect.startsWith('/')) {
+        router.push(decodedRedirect)
+      } else {
+        router.push('/dashboard')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {

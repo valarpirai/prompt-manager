@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Manager</title>
+    <style>
+        body {
+            width: 320px;
+            padding: 16px;
+            margin: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f9fafb;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            color: #1f2937;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .status.enabled {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .status.disabled {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .status.not-logged-in {
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
+
+        .instructions {
+            background-color: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .instructions strong {
+            color: #374151;
+        }
+
+        .instructions code {
+            background-color: #f3f4f6;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Prompt Manager</h1>
+    </div>
+
+    <div id="status" class="status enabled">
+        Extension is enabled
+    </div>
+
+    <div class="instructions">
+        <strong>How to use:</strong><br>
+        1. Type <code>::promptname</code> in any text field<br>
+        2. Press <strong>Tab</strong> or <strong>Shift+Enter</strong><br>
+        3. The prompt will be inserted automatically
+    </div>
+
+    <div class="actions">
+        <button id="settings-btn" class="btn-primary">Open Settings</button>
+        <button id="login-btn" class="btn-secondary">Log In</button>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

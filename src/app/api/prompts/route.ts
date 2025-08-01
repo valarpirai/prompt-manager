@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { withAuth, AuthenticatedRequest } from '@/lib/middleware'
+import { withAuth, withAuthAndCors, AuthenticatedRequest } from '@/lib/middleware'
 import { validatePromptTitle, validatePromptText, validateTags } from '@/lib/validation'
 import { Visibility } from '@prisma/client'
 
-export const GET = withAuth(async (req: AuthenticatedRequest) => {
+export const GET = withAuthAndCors(async (req: AuthenticatedRequest) => {
   try {
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -17,11 +17,88 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
     const sortOrder = searchParams.get('sortOrder') || 'desc'
     const ownerFilter = searchParams.get('owner')
     const filterType = searchParams.get('filterType')
+    
+    // Chrome extension support: exact title matching
+    const title = searchParams.get('title')
+    const exact = searchParams.get('exact') === 'true'
 
     const skip = (page - 1) * limit
 
-    const where: any = {
+    const where: Record<string, unknown> = {
       deleted_at: null
+    }
+
+    // Chrome extension: exact title matching
+    if (title && exact) {
+      // For exact title matching, we override other filters and only check accessibility
+      where.title = { equals: title, mode: 'insensitive' }
+      
+      // Only show prompts the user has access to
+      where.OR = [
+        { visibility: 'PUBLIC' },
+        { owner_id: req.user!.userId },
+        {
+          AND: [
+            { visibility: 'TEAM' },
+            { team_id: { not: null } },
+            {
+              team: {
+                members: {
+                  some: {
+                    user_id: req.user!.userId
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+      
+      // For exact title matching, return the most recent accessible version
+      const exactPrompts = await prisma.prompt.findMany({
+        where,
+        orderBy: { updated_at: 'desc' },
+        take: 1, // Get the most recent one
+        include: {
+          owner: {
+            select: {
+              id: true,
+              display_name: true,
+              email: true
+            }
+          },
+          team: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          tags: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          votes: {
+            where: {
+              user_id: req.user!.userId
+            },
+            select: {
+              vote_type: true
+            }
+          }
+        }
+      })
+      
+      return NextResponse.json({
+        prompts: exactPrompts,
+        pagination: {
+          page: 1,
+          limit: 1,
+          total: exactPrompts.length,
+          pages: 1
+        }
+      })
     }
 
     // Apply filter type logic
@@ -128,7 +205,7 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
       }
     }
 
-    const orderBy: any = {}
+    const orderBy: Record<string, string> = {}
     orderBy[sortBy] = sortOrder
 
     const [prompts, total] = await Promise.all([

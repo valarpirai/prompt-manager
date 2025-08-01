@@ -3,13 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-
-interface User {
-  id: number
-  email: string
-  display_name: string | null
-  is_verified: boolean
-}
+import { logout, User } from '@/lib/auth-client'
 
 export default function Navigation() {
   const [user, setUser] = useState<User | null>(null)
@@ -25,11 +19,7 @@ export default function Navigation() {
   }, [])
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    localStorage.removeItem('user')
-    setUser(null)
-    router.push('/')
+    logout()
   }
 
   const navItems = [

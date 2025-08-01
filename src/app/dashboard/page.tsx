@@ -5,13 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import Link from 'next/link'
 import DashboardEmailNotification from '@/components/DashboardEmailNotification'
-
-interface User {
-  id: number
-  email: string
-  display_name: string | null
-  is_verified: boolean
-}
+import { useAuthRedirect, User } from '@/lib/auth-client'
 
 interface Prompt {
   id: number
@@ -37,12 +31,13 @@ export default function DashboardPage() {
   })
   const router = useRouter()
 
+  useAuthRedirect()
+
   useEffect(() => {
     const userData = localStorage.getItem('user')
     const token = localStorage.getItem('accessToken')
 
     if (!userData || !token) {
-      router.push('/login')
       return
     }
 
