@@ -49,24 +49,21 @@ export default function VoteButtons({
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/prompts/${promptId}/vote`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ voteType }),
-      });
+      const { apiClient } = await import('@/lib/auth-client');
+      const response = await apiClient.post<{
+        data: {
+          upvote_count: number;
+          downvote_count: number;
+          userVote: 'UPVOTE' | 'DOWNVOTE' | null;
+        };
+      }>(`/prompts/${promptId}/vote`, { voteType });
 
-      if (response.ok) {
-        const data = await response.json();
-        setUpvoteCount(data.data.upvote_count);
-        setDownvoteCount(data.data.downvote_count);
-        setUserVote(data.data.userVote);
+      if (response.ok && response.data) {
+        setUpvoteCount(response.data.data.upvote_count);
+        setDownvoteCount(response.data.data.downvote_count);
+        setUserVote(response.data.data.userVote);
       } else {
-        const errorData = await response.json();
-        console.error('Vote error:', errorData.error);
+        console.error('Vote error:', response.error);
       }
     } catch (error) {
       console.error('Vote error:', error);

@@ -104,16 +104,13 @@ export default function PromptsPage() {
 
   const fetchCurrentUser = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/users/me', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const { apiClient } = await import('@/lib/auth-client');
+      const response = await apiClient.get<{
+        user: { id: number; email: string };
+      }>('/users/me');
 
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentUser(data.user);
+      if (response.ok && response.data) {
+        setCurrentUser(response.data.user);
       }
     } catch (error) {
       console.error('Error fetching current user:', error);
@@ -122,16 +119,13 @@ export default function PromptsPage() {
 
   const fetchTags = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/tags', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const { apiClient } = await import('@/lib/auth-client');
+      const response = await apiClient.get<{
+        tags: { id: number; name: string }[];
+      }>('/tags');
 
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableTags(data.tags);
+      if (response.ok && response.data) {
+        setAvailableTags(response.data.tags);
       }
     } catch (error) {
       console.error('Error fetching tags:', error);
@@ -141,7 +135,7 @@ export default function PromptsPage() {
   const fetchPrompts = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
+      const { apiClient } = await import('@/lib/auth-client');
       const params = new URLSearchParams({
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
@@ -156,16 +150,14 @@ export default function PromptsPage() {
         params.append('tags', filters.tags.join(','));
       }
 
-      const response = await fetch(`/api/prompts?${params}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await apiClient.get<{
+        prompts: Prompt[];
+        pagination: Pagination;
+      }>(`/prompts?${params}`);
 
-      if (response.ok) {
-        const data = await response.json();
-        setPrompts(data.prompts);
-        setPagination(data.pagination);
+      if (response.ok && response.data) {
+        setPrompts(response.data.prompts);
+        setPagination(response.data.pagination);
       }
     } catch (error) {
       console.error('Error fetching prompts:', error);
@@ -183,13 +175,8 @@ export default function PromptsPage() {
     if (!confirm('Are you sure you want to delete this prompt?')) return;
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/prompts/${promptId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const { apiClient } = await import('@/lib/auth-client');
+      const response = await apiClient.delete(`/prompts/${promptId}`);
 
       if (response.ok) {
         fetchPrompts();
@@ -203,25 +190,16 @@ export default function PromptsPage() {
     if (!cloneModal.prompt) return;
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(
-        `/api/prompts/${cloneModal.prompt.id}/clone`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ title }),
-        }
+      const { apiClient } = await import('@/lib/auth-client');
+      const response = await apiClient.post<{ prompt: { id: number } }>(
+        `/prompts/${cloneModal.prompt.id}/clone`,
+        { title }
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        router.push(`/prompts/${data.prompt.id}`);
+      if (response.ok && response.data) {
+        router.push(`/prompts/${response.data.prompt.id}`);
       } else {
-        const errorData = await response.json();
-        alert(errorData.error || 'Failed to clone prompt');
+        alert(response.error || 'Failed to clone prompt');
       }
     } catch (error) {
       console.error('Error cloning prompt:', error);
@@ -233,24 +211,16 @@ export default function PromptsPage() {
     if (!linkTeamModal.prompt) return;
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(
-        `/api/prompts/${linkTeamModal.prompt.id}/link-team`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ teamId }),
-        }
+      const { apiClient } = await import('@/lib/auth-client');
+      const response = await apiClient.put(
+        `/prompts/${linkTeamModal.prompt.id}/link-team`,
+        { teamId }
       );
 
       if (response.ok) {
         fetchPrompts(); // Refresh the list to show updated team info
       } else {
-        const errorData = await response.json();
-        alert(errorData.error || 'Failed to update team link');
+        alert(response.error || 'Failed to update team link');
       }
     } catch (error) {
       console.error('Error linking to team:', error);
@@ -268,12 +238,43 @@ export default function PromptsPage() {
 
   const handleExport = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
+      const accessToken = localStorage.getItem('accessToken');
       const response = await fetch('/api/prompts/export', {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
+
+      if (response.status === 401) {
+        const { refreshTokenIfNeeded } = await import('@/lib/auth-client');
+        const refreshed = await refreshTokenIfNeeded();
+        if (refreshed) {
+          const newToken = localStorage.getItem('accessToken');
+          const retryResponse = await fetch('/api/prompts/export', {
+            headers: {
+              Authorization: `Bearer ${newToken}`,
+            },
+          });
+          if (retryResponse.ok) {
+            const blob = await retryResponse.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download =
+              retryResponse.headers
+                .get('Content-Disposition')
+                ?.split('filename=')[1]
+                ?.replace(/"/g, '') || 'prompts-export.csv';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            return;
+          }
+        }
+        alert('Authentication failed. Please log in again.');
+        return;
+      }
 
       if (response.ok) {
         const blob = await response.blob();
@@ -301,17 +302,35 @@ export default function PromptsPage() {
   const handleImport = async (file: File) => {
     setImportLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
+      const accessToken = localStorage.getItem('accessToken');
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/prompts/import', {
+      let response = await fetch('/api/prompts/import', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: formData,
       });
+
+      if (response.status === 401) {
+        const { refreshTokenIfNeeded } = await import('@/lib/auth-client');
+        const refreshed = await refreshTokenIfNeeded();
+        if (refreshed) {
+          const newToken = localStorage.getItem('accessToken');
+          response = await fetch('/api/prompts/import', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${newToken}`,
+            },
+            body: formData,
+          });
+        } else {
+          alert('Authentication failed. Please log in again.');
+          return;
+        }
+      }
 
       const data = await response.json();
 

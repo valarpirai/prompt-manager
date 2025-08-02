@@ -25,20 +25,13 @@ export default function EmailVerificationBanner({
     setMessage('');
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/user/resend-verification', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
+      const { apiClient } = await import('@/lib/auth-client');
+      const response = await apiClient.post('/user/resend-verification');
 
       if (response.ok) {
         setMessage('Verification email sent! Please check your inbox.');
       } else {
-        setMessage(data.error || 'Failed to send verification email');
+        setMessage(response.error || 'Failed to send verification email');
       }
     } catch (error) {
       console.error('Error resending verification:', error);
