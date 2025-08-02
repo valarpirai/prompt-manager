@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import Link from 'next/link';
 import DashboardEmailNotification from '@/components/DashboardEmailNotification';
+import ChromeExtensionModal from '@/components/ChromeExtensionModal';
 import { useAuthRedirect, User } from '@/lib/auth-client';
 
 interface Prompt {
@@ -24,6 +25,7 @@ export default function DashboardPage() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
   const [verificationMessage, setVerificationMessage] = useState('');
+  const [showExtensionModal, setShowExtensionModal] = useState(false);
   const [stats, setStats] = useState({
     totalPrompts: 0,
     publicPrompts: 0,
@@ -514,12 +516,47 @@ export default function DashboardPage() {
                       </p>
                     </div>
                   </Link>
+
+                  <button
+                    onClick={() => setShowExtensionModal(true)}
+                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors w-full text-left"
+                  >
+                    <div className="flex-shrink-0">
+                      <svg
+                        className="h-6 w-6 text-orange-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">
+                        Install Chrome Extension
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Use prompts directly in any text field
+                      </p>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </main>
+
+      {/* Chrome Extension Modal */}
+      <ChromeExtensionModal
+        isOpen={showExtensionModal}
+        onClose={() => setShowExtensionModal(false)}
+      />
     </div>
   );
 }

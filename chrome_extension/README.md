@@ -13,13 +13,52 @@ A Chrome extension that allows users to seamlessly insert prompts from the Promp
 
 ## Installation
 
-### From Source
+### Option 1: Download Pre-built Extension (Recommended)
 
-1. Clone or download this extension
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right
-4. Click "Load unpacked" and select the extension folder
-5. The extension will be installed and ready to use
+1. **Download the extension**: [Download chrome_extension.zip](https://github.com/valarpirai/prompt-manager/tree/main/chrome_extension.zip)
+2. **Extract the ZIP file** to a folder on your computer
+3. **Open Chrome** and navigate to `chrome://extensions/`
+4. **Enable "Developer mode"** by toggling the switch in the top right corner
+5. **Click "Load unpacked"** button that appears
+6. **Select the extracted extension folder** (the folder containing `manifest.json`)
+7. The extension will be installed and ready to use
+
+### Option 2: From Source Code
+
+1. Clone or download the entire repository
+2. Navigate to the `chrome_extension/` folder
+3. Open Chrome and navigate to `chrome://extensions/`
+4. Enable "Developer mode" in the top right
+5. Click "Load unpacked" and select the `chrome_extension/` folder
+6. The extension will be installed and ready to use
+
+### Installation Steps with Screenshots
+
+#### Step 1: Download and Extract
+
+Download the ZIP file and extract it to a memorable location (e.g., Desktop or Documents folder).
+
+#### Step 2: Open Chrome Extensions Page
+
+- Type `chrome://extensions/` in your Chrome address bar and press Enter
+- Or go to Chrome menu → More tools → Extensions
+
+#### Step 3: Enable Developer Mode
+
+- Look for the "Developer mode" toggle in the top-right corner
+- Click to enable it (it should turn blue/on)
+
+#### Step 4: Load the Extension
+
+- Click the "Load unpacked" button that appears
+- Browse to and select the extracted extension folder
+- Make sure you select the folder that contains the `manifest.json` file
+
+#### Step 5: Verify Installation
+
+- The extension should appear in your extensions list
+- You should see the Prompt Manager icon in your Chrome toolbar
+- If you don't see the icon, click the puzzle piece icon in the toolbar and pin the Prompt Manager extension
 
 ### Configuration
 

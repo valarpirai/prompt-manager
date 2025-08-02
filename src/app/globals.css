@@ -24,3 +24,7 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.bg-opacity-50 {
+  background-color: #0a0a0a58;
+}
