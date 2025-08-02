@@ -31,11 +31,11 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       );
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
         {
           error:
-            'LLM service not configured. Please add OPENAI_API_KEY to environment variables.',
+            'LLM service not configured. Please add ANTHROPIC_API_KEY to environment variables.',
         },
         { status: 503 }
       );
@@ -55,26 +55,25 @@ Return only the generated prompt text, without any additional commentary or expl
 
     const userPrompt = `Create an AI prompt for: "${description}"${context ? `\n\nAdditional context: ${context}` : ''}`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'x-api-key': process.env.ANTHROPIC_API_KEY!,
         'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 800,
         temperature: 0.7,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('OpenAI API error:', errorData);
+      console.error('Anthropic API error:', errorData);
       return NextResponse.json(
         {
           error: 'Failed to generate prompt. Please try again later.',
@@ -84,7 +83,7 @@ Return only the generated prompt text, without any additional commentary or expl
     }
 
     const data = await response.json();
-    const generatedPrompt = data.choices[0]?.message?.content?.trim();
+    const generatedPrompt = data.content[0]?.text?.trim();
 
     if (!generatedPrompt) {
       return NextResponse.json(

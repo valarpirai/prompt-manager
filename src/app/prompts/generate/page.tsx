@@ -143,8 +143,8 @@ export default function GeneratePromptPage() {
               Generate AI Prompt
             </h1>
             <p className="mt-1 text-sm text-gray-600">
-              Describe what you want your AI prompt to do, and our AI will
-              generate a detailed prompt for you.
+              Describe what you want your AI prompt to do, and Claude Sonnet 4
+              will generate a detailed prompt for you.
             </p>
           </div>
 
