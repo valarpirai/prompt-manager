@@ -15,7 +15,7 @@ A Chrome extension that allows users to seamlessly insert prompts from the Promp
 
 ### Option 1: Download Pre-built Extension (Recommended)
 
-1. **Download the extension**: [Download chrome_extension.zip](https://github.com/valarpirai/prompt-manager/tree/main/chrome_extension.zip)
+1. **Download the extension**: [Download chrome_extension.zip](https://github.com/valarpirai/prompt-manager/raw/refs/heads/main/chrome_extension.zip)
 2. **Extract the ZIP file** to a folder on your computer
 3. **Open Chrome** and navigate to `chrome://extensions/`
 4. **Enable "Developer mode"** by toggling the switch in the top right corner

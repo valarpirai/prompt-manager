@@ -16,6 +16,14 @@ export const metadata: Metadata = {
   title: 'Prompt Manager - Manage and Generate AI Prompts',
   description:
     'A comprehensive platform for creating, managing, and collaborating on AI prompts with team support and LLM-powered generation.',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '16x16', type: 'image/x-icon' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({
