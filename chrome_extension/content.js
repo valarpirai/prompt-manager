@@ -889,7 +889,7 @@ function initExtensionLoginListener() {
   if (window.location.pathname.includes('/auth/extension-login')) {
     // Listen for custom events from the extension login page
     window.addEventListener('extensionLoginSuccess', (event) => {
-      const { accessToken, refreshToken, user } = event.detail;
+      const { accessToken, refreshToken, tokenExpiry, user } = event.detail;
 
       // Send tokens to background script
       chrome.runtime.sendMessage(
@@ -897,6 +897,7 @@ function initExtensionLoginListener() {
           type: 'SAVE_AUTH_TOKENS',
           accessToken,
           refreshToken,
+          tokenExpiry,
           user,
         },
         (response) => {

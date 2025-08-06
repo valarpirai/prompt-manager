@@ -68,6 +68,7 @@ function ExtensionLoginContent() {
             type: 'EXTENSION_LOGIN_SUCCESS',
             accessToken: result.accessToken,
             refreshToken: result.refreshToken,
+            tokenExpiry: result.tokenExpiry,
             user: result.user,
           },
           '*'
@@ -94,6 +95,7 @@ function ExtensionLoginContent() {
                 type: 'SAVE_AUTH_TOKENS',
                 accessToken: result.accessToken,
                 refreshToken: result.refreshToken,
+                tokenExpiry: result.tokenExpiry,
                 user: result.user,
               },
               (response) => {
@@ -121,6 +123,7 @@ function ExtensionLoginContent() {
               detail: {
                 accessToken: result.accessToken,
                 refreshToken: result.refreshToken,
+                tokenExpiry: result.tokenExpiry,
                 user: result.user,
               },
             });

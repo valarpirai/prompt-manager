@@ -5,9 +5,11 @@ class PromptManagerAPI {
     this.storageKeys = {
       token: 'pm_jwt_token',
       refreshToken: 'pm_refresh_token',
+      tokenExpiry: 'pm_token_expiry',
       baseURL: 'pm_base_url',
       isEnabled: 'pm_is_enabled',
     };
+    this.refreshPromise = null; // Prevent concurrent refresh attempts
     this.init();
   }
 
@@ -23,14 +25,52 @@ class PromptManagerAPI {
   }
 
   async getToken() {
-    const result = await chrome.storage.local.get([this.storageKeys.token]);
-    return result[this.storageKeys.token];
+    // Check if token is expired before returning it
+    const result = await chrome.storage.local.get([
+      this.storageKeys.token,
+      this.storageKeys.tokenExpiry,
+    ]);
+
+    const token = result[this.storageKeys.token];
+    const expiry = result[this.storageKeys.tokenExpiry];
+
+    if (!token) return null;
+
+    // If token expires in next 5 minutes, proactively refresh
+    if (expiry) {
+      const expiryTime = new Date(expiry).getTime();
+      const now = Date.now();
+      const fiveMinutes = 5 * 60 * 1000;
+
+      if (expiryTime <= now + fiveMinutes) {
+        console.log('Token expires soon, attempting refresh...');
+        const refreshed = await this.tryRefreshToken();
+        if (refreshed) {
+          // Return the new token
+          const newResult = await chrome.storage.local.get([
+            this.storageKeys.token,
+          ]);
+          return newResult[this.storageKeys.token];
+        }
+        // If refresh failed but token hasn't expired yet, return current token
+        if (expiryTime > now) {
+          return token;
+        }
+        // Token is expired and refresh failed
+        return null;
+      }
+    }
+
+    return token;
   }
 
-  async setToken(token, refreshToken = null) {
+  async setToken(token, refreshToken = null, tokenExpiry = null) {
     const data = { [this.storageKeys.token]: token };
     if (refreshToken) {
       data[this.storageKeys.refreshToken] = refreshToken;
+    }
+    if (tokenExpiry) {
+      data[this.storageKeys.tokenExpiry] = tokenExpiry;
     }
     await chrome.storage.local.set(data);
   }
@@ -39,7 +79,9 @@ class PromptManagerAPI {
     await chrome.storage.local.remove([
       this.storageKeys.token,
       this.storageKeys.refreshToken,
+      this.storageKeys.tokenExpiry,
     ]);
+    this.refreshPromise = null; // Reset refresh promise
   }
 
   async makeRequest(endpoint, options = {}) {
@@ -65,12 +107,17 @@ class PromptManagerAPI {
     });
 
     // Handle token expiration
-    if (response.status === 401 && !options.skipAuth) {
+    if (
+      response.status === 401 &&
+      !options.skipAuth &&
+      !options._retryAttempt
+    ) {
+      console.log('Received 401, attempting token refresh...');
       // Try to refresh token
       const refreshed = await this.tryRefreshToken();
       if (refreshed) {
-        // Retry with new token
-        return this.makeRequest(endpoint, options);
+        // Retry with new token (mark as retry to prevent infinite loops)
+        return this.makeRequest(endpoint, { ...options, _retryAttempt: true });
       } else {
         await this.clearTokens();
         throw new Error('Authentication expired');
@@ -86,14 +133,34 @@ class PromptManagerAPI {
   }
 
   async tryRefreshToken() {
+    // Prevent concurrent refresh attempts
+    if (this.refreshPromise) {
+      console.log('Token refresh already in progress, waiting...');
+      return await this.refreshPromise;
+    }
+
+    this.refreshPromise = this._performTokenRefresh();
+    try {
+      const result = await this.refreshPromise;
+      return result;
+    } finally {
+      this.refreshPromise = null;
+    }
+  }
+
+  async _performTokenRefresh() {
     try {
       const result = await chrome.storage.local.get([
         this.storageKeys.refreshToken,
       ]);
       const refreshToken = result[this.storageKeys.refreshToken];
 
-      if (!refreshToken) return false;
+      if (!refreshToken) {
+        console.log('No refresh token found');
+        return false;
+      }
 
+      console.log('Attempting to refresh token...');
       const response = await fetch(
         `${this.baseURL}/api/auth/extension-refresh`,
         {
@@ -107,11 +174,26 @@ class PromptManagerAPI {
 
       if (response.ok) {
         const data = await response.json();
-        await this.setToken(data.token, data.refreshToken);
+        console.log('Token refresh successful');
+
+        // Fix field mapping: API returns accessToken, but extension expects token
+        const newToken = data.accessToken || data.token;
+        const newRefreshToken = data.refreshToken;
+        const tokenExpiry = data.tokenExpiry;
+
+        if (!newToken) {
+          console.error('No access token in refresh response:', data);
+          return false;
+        }
+
+        await this.setToken(newToken, newRefreshToken, tokenExpiry);
         return true;
+      } else {
+        const errorText = await response.text();
+        console.error('Token refresh failed:', response.status, errorText);
       }
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      console.error('Token refresh error:', error);
     }
 
     return false;
@@ -324,7 +406,16 @@ async function handleLogout(sendResponse) {
 
 async function handleSaveAuthTokens(request, sendResponse) {
   try {
-    await api.setToken(request.accessToken, request.refreshToken);
+    const token = request.accessToken || request.token;
+    const refreshToken = request.refreshToken;
+    const tokenExpiry = request.tokenExpiry;
+
+    if (!token) {
+      throw new Error('No access token provided');
+    }
+
+    await api.setToken(token, refreshToken, tokenExpiry);
+    console.log('Auth tokens saved successfully');
     sendResponse({ success: true });
   } catch (error) {
     console.error('Error saving auth tokens:', error);

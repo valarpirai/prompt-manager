@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Extension Auth Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        button { padding: 8px 16px; margin: 5px; }
+        .log { background: #f5f5f5; padding: 10px; font-family: monospace; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>Chrome Extension Auth Test</h1>
+    
+    <div class="section">
+        <h3>Token Management</h3>
+        <button onclick="checkTokens()">Check Current Tokens</button>
+        <button onclick="clearTokens()">Clear Tokens</button>
+        <button onclick="testTokenRefresh()">Test Token Refresh</button>
+    </div>
+    
+    <div class="section">
+        <h3>API Test</h3>
+        <button onclick="testAPICall()">Test API Call</button>
+        <button onclick="testPromptFetch()">Test Prompt Fetch</button>
+    </div>
+    
+    <div class="section">
+        <h3>Settings</h3>
+        <input type="text" id="apiUrl" placeholder="API URL" value="http://localhost:3000">
+        <button onclick="updateSettings()">Update Settings</button>
+    </div>
+    
+    <div class="section">
+        <h3>Log</h3>
+        <div id="log" class="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script src="background.js"></script>
+    <script>
+        // Initialize API instance
+        const testAPI = new PromptManagerAPI();
+        
+        function log(message, data = null) {
+            const timestamp = new Date().toISOString();
+            const logDiv = document.getElementById('log');
+            let logEntry = `[${timestamp}] ${message}`;
+            if (data) {
+                logEntry += '\n' + JSON.stringify(data, null, 2);
+            }
+            logDiv.textContent += logEntry + '\n\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message, data);
+        }
+
+        async function checkTokens() {
+            try {
+                const result = await chrome.storage.local.get([
+                    testAPI.storageKeys.token,
+                    testAPI.storageKeys.refreshToken,
+                    testAPI.storageKeys.tokenExpiry
+                ]);
+                
+                log('Current tokens:', {
+                    hasToken: !!result[testAPI.storageKeys.token],
+                    hasRefreshToken: !!result[testAPI.storageKeys.refreshToken],
+                    tokenExpiry: result[testAPI.storageKeys.tokenExpiry],
+                    isExpired: result[testAPI.storageKeys.tokenExpiry] ? 
+                        new Date(result[testAPI.storageKeys.tokenExpiry]) < new Date() : 'unknown'
+                });
+            } catch (error) {
+                log('Error checking tokens:', error);
+            }
+        }
+
+        async function clearTokens() {
+            try {
+                await testAPI.clearTokens();
+                log('Tokens cleared successfully');
+            } catch (error) {
+                log('Error clearing tokens:', error);
+            }
+        }
+
+        async function testTokenRefresh() {
+            try {
+                log('Testing token refresh...');
+                const result = await testAPI.tryRefreshToken();
+                log('Token refresh result:', { success: result });
+            } catch (error) {
+                log('Error testing token refresh:', error);
+            }
+        }
+
+        async function testAPICall() {
+            try {
+                log('Testing API call...');
+                const result = await testAPI.makeRequest('/api/prompts?limit=1');
+                log('API call result:', result);
+            } catch (error) {
+                log('Error testing API call:', error);
+            }
+        }
+
+        async function testPromptFetch() {
+            try {
+                const promptName = prompt('Enter prompt name to test:');
+                if (!promptName) return;
+                
+                log(`Testing prompt fetch for: ${promptName}`);
+                const result = await testAPI.getPromptByTitle(promptName);
+                log('Prompt fetch result:', result);
+            } catch (error) {
+                log('Error testing prompt fetch:', error);
+            }
+        }
+
+        async function updateSettings() {
+            try {
+                const apiUrl = document.getElementById('apiUrl').value;
+                await testAPI.updateSettings({
+                    [testAPI.storageKeys.baseURL]: apiUrl
+                });
+                log(`Settings updated, API URL: ${apiUrl}`);
+            } catch (error) {
+                log('Error updating settings:', error);
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        // Mock chrome.storage.local for testing
+        if (typeof chrome === 'undefined') {
+            window.chrome = {
+                storage: {
+                    local: {
+                        data: {},
+                        get(keys) {
+                            return Promise.resolve(
+                                Array.isArray(keys) 
+                                    ? keys.reduce((acc, key) => ({ ...acc, [key]: this.data[key] }), {})
+                                    : { [keys]: this.data[keys] }
+                            );
+                        },
+                        set(data) {
+                            Object.assign(this.data, data);
+                            return Promise.resolve();
+                        },
+                        remove(keys) {
+                            const keysArray = Array.isArray(keys) ? keys : [keys];
+                            keysArray.forEach(key => delete this.data[key]);
+                            return Promise.resolve();
+                        }
+                    }
+                }
+            };
+        }
+
+        log('Extension auth test page loaded');
+    </script>
+</body>
+</html>
